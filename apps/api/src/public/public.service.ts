@@ -1,0 +1,348 @@
+import { Injectable, NotFoundException } from '@nestjs/common';
+
+import { PrismaService } from '../prisma/prisma.service';
+import { ReservationsService } from '../reservations/reservations.service';
+import { QueueService } from '../queue/queue.service';
+
+@Injectable()
+export class PublicService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly reservationsService: ReservationsService,
+    private readonly queueService: QueueService,
+  ) {}
+
+  async getTableByQrToken(qrToken: string) {
+    const table = await this.prisma.table.findFirst({
+      where: {
+        qrToken,
+        isActive: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        capacity: true,
+        location: true,
+        photoUrl: true,
+        customerSelectable: true,
+        status: true,
+
+        branch: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+
+            organization: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+                currency: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!table) {
+      throw new NotFoundException(
+        'Table QR code is invalid or no longer available.',
+      );
+    }
+
+    return {
+      table: {
+        id: table.id,
+        name: table.name,
+        capacity: table.capacity,
+        location: table.location,
+        photoUrl: table.photoUrl,
+        customerSelectable: table.customerSelectable,
+        status: table.status,
+      },
+
+      branch: table.branch,
+
+      organization: table.branch.organization,
+    };
+  }
+
+  async getPublicBranch(branchId: string) {
+    const branch = await this.prisma.branch.findFirst({
+      where: {
+        id: branchId,
+        isActive: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        organizationId: true,
+
+        organization: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            currency: true,
+          },
+        },
+      },
+    });
+
+    if (!branch) {
+      throw new NotFoundException('Branch not found.');
+    }
+
+    return branch;
+  }
+
+  async getReservationAvailability(
+    branchId: string,
+    startAt: string,
+    endAt: string,
+    guestCount: number,
+  ) {
+    const branch = await this.getPublicBranch(branchId);
+
+    const startDate = new Date(startAt);
+    const endDate = new Date(endAt);
+
+    const tables = await this.reservationsService.findAvailableTables(
+      branch.organizationId,
+      branch.id,
+      startDate,
+      endDate,
+      guestCount,
+    );
+
+    return {
+      branch: {
+        id: branch.id,
+        name: branch.name,
+      },
+
+      organization: {
+        id: branch.organization.id,
+        name: branch.organization.name,
+        currency: branch.organization.currency,
+      },
+
+      startAt: startDate,
+      endAt: endDate,
+      guestCount,
+
+      tables: tables.map((table) => ({
+        id: table.id,
+        name: table.name,
+        capacity: table.capacity,
+        location: table.location,
+        photoUrl: table.photoUrl,
+        status: table.status,
+      })),
+    };
+  }
+
+  async createPublicReservation(
+    branchId: string,
+    data: {
+      customerName: string;
+      customerPhone?: string;
+      guestCount: number;
+      startAt: string;
+      endAt: string;
+      tableId?: string;
+      notes?: string;
+    },
+  ) {
+    const branch = await this.getPublicBranch(branchId);
+
+    const reservation = await this.reservationsService.create(
+      branch.organizationId,
+      branch.id,
+      data,
+    );
+
+    return {
+      publicToken: reservation.publicToken,
+      customerName: reservation.customerName,
+      guestCount: reservation.guestCount,
+      startAt: reservation.startAt,
+      endAt: reservation.endAt,
+      status: reservation.status,
+
+      table: reservation.table
+        ? {
+            id: reservation.table.id,
+            name: reservation.table.name,
+            capacity: reservation.table.capacity,
+            location: reservation.table.location,
+            photoUrl: reservation.table.photoUrl,
+          }
+        : null,
+
+      branch: {
+        id: branch.id,
+        name: branch.name,
+      },
+    };
+  }
+
+  async getReservationByPublicToken(publicToken: string) {
+    const reservation = await this.prisma.reservation.findUnique({
+      where: {
+        publicToken,
+      },
+
+      select: {
+        publicToken: true,
+        customerName: true,
+        guestCount: true,
+        startAt: true,
+        endAt: true,
+        status: true,
+        notes: true,
+
+        table: {
+          select: {
+            name: true,
+            capacity: true,
+            location: true,
+            photoUrl: true,
+          },
+        },
+
+        branch: {
+          select: {
+            name: true,
+
+            organization: {
+              select: {
+                name: true,
+                currency: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!reservation) {
+      throw new NotFoundException('Reservation not found.');
+    }
+
+    return reservation;
+  }
+
+  async joinPublicQueue(
+    branchId: string,
+    data: {
+      customerName: string;
+      customerPhone?: string;
+      guestCount: number;
+      notes?: string;
+    },
+  ) {
+    const branch = await this.getPublicBranch(branchId);
+
+    const queueEntry = await this.queueService.joinQueue(
+      branch.organizationId,
+      branch.id,
+      data,
+    );
+
+    return {
+      publicToken: queueEntry.publicToken,
+      queueNumber: queueEntry.queueNumber,
+      customerName: queueEntry.customerName,
+      guestCount: queueEntry.guestCount,
+      status: queueEntry.status,
+      joinedAt: queueEntry.joinedAt,
+
+      branch: {
+        id: branch.id,
+        name: branch.name,
+      },
+    };
+  }
+
+  async getQueueByPublicToken(publicToken: string) {
+    const entry = await this.prisma.queueEntry.findUnique({
+      where: {
+        publicToken,
+      },
+
+      select: {
+        publicToken: true,
+        queueDate: true,
+        queueNumber: true,
+        customerName: true,
+        guestCount: true,
+        status: true,
+        joinedAt: true,
+        calledAt: true,
+        seatedAt: true,
+        branchId: true,
+
+        table: {
+          select: {
+            name: true,
+            capacity: true,
+            location: true,
+            photoUrl: true,
+          },
+        },
+
+        branch: {
+          select: {
+            name: true,
+
+            organization: {
+              select: {
+                name: true,
+                currency: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!entry) {
+      throw new NotFoundException('Queue entry not found.');
+    }
+
+    let position: number | null = null;
+
+    if (entry.status === 'WAITING') {
+      const aheadCount = await this.prisma.queueEntry.count({
+        where: {
+          branchId: entry.branchId,
+          queueDate: entry.queueDate,
+          status: 'WAITING',
+          joinedAt: {
+            lt: entry.joinedAt,
+          },
+        },
+      });
+
+      position = aheadCount + 1;
+    }
+
+    return {
+      publicToken: entry.publicToken,
+      queueNumber: entry.queueNumber,
+      customerName: entry.customerName,
+      guestCount: entry.guestCount,
+      status: entry.status,
+      joinedAt: entry.joinedAt,
+      calledAt: entry.calledAt,
+      seatedAt: entry.seatedAt,
+      position,
+      table: entry.table,
+      branch: entry.branch,
+    };
+  }
+}

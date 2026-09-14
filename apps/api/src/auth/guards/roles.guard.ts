@@ -9,7 +9,15 @@ import { MembershipRole } from '@prisma/client';
 
 import { ROLES_KEY } from '../decorators/roles.decorator';
 
-interface RequestWithUser {
+interface OrganizationMembership {
+  id: string;
+  userId: string;
+  organizationId: string;
+  branchId: string | null;
+  role: MembershipRole;
+}
+
+interface RequestWithAuth {
   user?: {
     id: string;
     email: string;
@@ -17,6 +25,7 @@ interface RequestWithUser {
     branchId?: string | null;
     role?: string;
   };
+  organizationMembership?: OrganizationMembership;
 }
 
 @Injectable()
@@ -36,6 +45,7 @@ export class RolesGuard implements CanActivate {
         context.getClass(),
       ]);
 
+    // If endpoint has no @Roles(), allow it.
     if (!requiredRoles?.length) {
       return true;
     }
@@ -43,24 +53,25 @@ export class RolesGuard implements CanActivate {
     const request =
       context
         .switchToHttp()
-        .getRequest<RequestWithUser>();
+        .getRequest<RequestWithAuth>();
 
-    const user = request.user;
-
-    if (!user) {
+    if (!request.user) {
       throw new ForbiddenException(
         'Authenticated user is required',
       );
     }
 
-    if (!user.role) {
+    const membership =
+      request.organizationMembership;
+
+    if (!membership) {
       throw new ForbiddenException(
-        'No organization role found',
+        'No organization membership found',
       );
     }
 
     const hasRole = requiredRoles.includes(
-      user.role as MembershipRole,
+      membership.role,
     );
 
     if (!hasRole) {

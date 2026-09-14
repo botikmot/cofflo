@@ -15,6 +15,20 @@ async function bootstrap() {
     }),
   );
 
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+  ];
+
+  if (process.env.WEB_URL) {
+    allowedOrigins.push(process.env.WEB_URL);
+  }
+
+  app.enableCors({
+    origin: allowedOrigins,
+    credentials: true,
+  });
+
   const port = process.env.PORT ?? 4000;
 
   await app.listen(port);

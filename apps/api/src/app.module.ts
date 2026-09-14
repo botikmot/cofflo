@@ -7,6 +7,15 @@ import { OrganizationsModule } from './organizations/organizations.module';
 import { BranchesModule } from './branches/branches.module';
 import { MembershipsModule } from './memberships/memberships.module';
 import { AuthModule } from './auth/auth.module';
+import { InvitationsModule } from './invitations/invitations.module';
+import { MailModule } from './mail/mail.module';
+import { ProductsModule } from './products/products.module';
+import { InventoryModule } from './inventory/inventory.module';
+import { OrdersModule } from './orders/orders.module';
+import { TablesModule } from './tables/tables.module';
+import { PublicModule } from './public/public.module';
+import { ReservationsModule } from './reservations/reservations.module';
+import { QueueModule } from './queue/queue.module';
 
 @Module({
   imports: [
@@ -18,6 +27,15 @@ import { AuthModule } from './auth/auth.module';
     BranchesModule,
     MembershipsModule,
     AuthModule,
+    InvitationsModule,
+    MailModule,
+    ProductsModule,
+    InventoryModule,
+    OrdersModule,
+    TablesModule,
+    PublicModule,
+    ReservationsModule,
+    QueueModule,
   ],
   controllers: [AppController],
   providers: [AppService],

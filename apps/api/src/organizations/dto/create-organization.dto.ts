@@ -6,7 +6,10 @@ import {
   Length,
   Matches,
   MaxLength,
+  IsIn,
 } from 'class-validator';
+
+import { SUPPORTED_CURRENCIES } from '../../common/constants/currencies';
 
 export class CreateOrganizationDto {
   @IsString()
@@ -30,6 +33,11 @@ export class CreateOrganizationDto {
   @IsString()
   @MaxLength(1000)
   description?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsIn(SUPPORTED_CURRENCIES)
+  currency?: string;
 
   @IsOptional()
   @IsUrl()

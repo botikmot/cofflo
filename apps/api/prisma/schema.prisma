@@ -26,11 +26,83 @@ enum UserStatus {
   DEACTIVATED
 }
 
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  CANCELLED
+}
+
+enum ProductStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum InventoryMovementType {
+  IN
+  OUT
+  ADJUSTMENT
+  WASTE
+}
+
+enum OrderType {
+  DINE_IN
+  TAKEOUT
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PREPARING
+  READY
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  UNPAID
+  PAID
+  REFUNDED
+}
+
+enum PaymentMethod {
+  CASH
+  GCASH
+  CARD
+  OTHER
+}
+
+enum TableStatus {
+  AVAILABLE
+  OCCUPIED
+  RESERVED
+  UNAVAILABLE
+}
+
+enum ReservationStatus {
+  PENDING
+  CONFIRMED
+  SEATED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum QueueStatus {
+  WAITING
+  CALLED
+  SEATED
+  CANCELLED
+  NO_SHOW
+}
+
 model Organization {
-  id     String             @id @default(uuid())
-  name   String
-  slug   String             @unique
-  status OrganizationStatus @default(ACTIVE)
+  id       String             @id @default(uuid())
+  name     String
+  slug     String             @unique
+  status   OrganizationStatus @default(ACTIVE)
+  currency String             @default("PHP")
 
   logoUrl        String?
   tagline        String?
@@ -43,11 +115,22 @@ model Organization {
   address String?
   website String?
 
+  products           Product[]           @relation("OrganizationProducts")
+  productCategories  ProductCategory[]   @relation("OrganizationProductCategories")
+  inventoryItems     InventoryItem[]     @relation("OrganizationInventoryItems")
+  inventoryMovements InventoryMovement[] @relation("OrganizationInventoryMovements")
+  orders             Order[]             @relation("OrganizationOrders")
+  payments           Payment[]           @relation("OrganizationPayments")
+  tables             Table[]             @relation("OrganizationTables")
+  reservations       Reservation[]       @relation("OrganizationReservations")
+  queueEntries       QueueEntry[]        @relation("OrganizationQueueEntries")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   branches    Branch[]
   memberships Membership[]
+  invitations Invitation[]
 }
 
 model Branch {
@@ -68,8 +151,16 @@ model Branch {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  memberships  Membership[]
+  organization       Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  memberships        Membership[]
+  invitations        Invitation[]
+  inventoryItems     InventoryItem[]     @relation("BranchInventoryItems")
+  inventoryMovements InventoryMovement[] @relation("BranchInventoryMovements")
+  orders             Order[]             @relation("BranchOrders")
+  payments           Payment[]           @relation("BranchPayments")
+  tables             Table[]             @relation("BranchTables")
+  reservations       Reservation[]       @relation("BranchReservations")
+  queueEntries       QueueEntry[]        @relation("BranchQueueEntries")
 
   @@unique([organizationId, slug])
   @@index([organizationId])
@@ -107,4 +198,313 @@ model Membership {
   @@index([organizationId])
   @@index([branchId])
   @@index([userId])
+}
+
+model Invitation {
+  id             String           @id @default(uuid())
+  organizationId String
+  branchId       String?
+  email          String
+  role           MembershipRole   @default(STAFF)
+  tokenHash      String           @unique
+  status         InvitationStatus @default(PENDING)
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch       Branch?      @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([branchId])
+  @@index([email])
+  @@index([status])
+  @@index([expiresAt])
+}
+
+model Product {
+  id             String  @id @default(uuid())
+  organizationId String
+  categoryId     String?
+
+  name        String
+  description String?
+  sku         String?
+  price       Decimal  @db.Decimal(12, 2)
+  cost        Decimal? @db.Decimal(12, 2)
+
+  status ProductStatus @default(ACTIVE)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orderItems OrderItem[] @relation("ProductOrderItems")
+
+  organization Organization     @relation("OrganizationProducts", fields: [organizationId], references: [id])
+  category     ProductCategory? @relation("CategoryProducts", fields: [categoryId], references: [id])
+
+  @@unique([organizationId, sku])
+  @@index([organizationId])
+  @@index([categoryId])
+  @@index([organizationId, status])
+}
+
+model ProductCategory {
+  id             String @id @default(uuid())
+  organizationId String
+
+  name        String
+  description String?
+  sortOrder   Int     @default(0)
+  isActive    Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization Organization @relation("OrganizationProductCategories", fields: [organizationId], references: [id])
+  products     Product[]    @relation("CategoryProducts")
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+}
+
+model InventoryItem {
+  id             String @id @default(uuid())
+  organizationId String
+  branchId       String
+
+  name         String
+  sku          String?
+  unit         String
+  currentStock Decimal @default(0) @db.Decimal(12, 3)
+  minimumStock Decimal @default(0) @db.Decimal(12, 3)
+  isActive     Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization Organization @relation("OrganizationInventoryItems", fields: [organizationId], references: [id])
+
+  branch Branch @relation("BranchInventoryItems", fields: [branchId], references: [id])
+
+  movements InventoryMovement[] @relation("InventoryItemMovements")
+
+  @@unique([branchId, name])
+  @@unique([branchId, sku])
+  @@index([organizationId])
+  @@index([branchId])
+  @@index([branchId, isActive])
+}
+
+model InventoryMovement {
+  id              String @id @default(uuid())
+  inventoryItemId String
+  organizationId  String
+  branchId        String
+  createdById     String
+
+  type      InventoryMovementType
+  quantity  Decimal               @db.Decimal(12, 3)
+  reason    String?
+  reference String?
+
+  createdAt DateTime @default(now())
+
+  inventoryItem InventoryItem @relation("InventoryItemMovements", fields: [inventoryItemId], references: [id])
+
+  organization Organization @relation("OrganizationInventoryMovements", fields: [organizationId], references: [id])
+
+  branch Branch @relation("BranchInventoryMovements", fields: [branchId], references: [id])
+}
+
+model Order {
+  id             String @id @default(uuid())
+  organizationId String
+  branchId       String
+  createdById    String
+
+  orderNumber String @unique
+
+  orderType     OrderType      @default(DINE_IN)
+  status        OrderStatus    @default(PENDING)
+  paymentStatus PaymentStatus  @default(UNPAID)
+  paymentMethod PaymentMethod?
+  payments      Payment[]      @relation("OrderPayments")
+
+  subtotal Decimal @db.Decimal(12, 2)
+  discount Decimal @default(0) @db.Decimal(12, 2)
+  tax      Decimal @default(0) @db.Decimal(12, 2)
+  total    Decimal @db.Decimal(12, 2)
+  currency String
+  tableId  String?
+  table    Table?  @relation("TableOrders", fields: [tableId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization Organization @relation("OrganizationOrders", fields: [organizationId], references: [id])
+
+  branch Branch @relation("BranchOrders", fields: [branchId], references: [id])
+
+  items OrderItem[]
+
+  @@index([organizationId])
+  @@index([branchId])
+  @@index([branchId, status])
+  @@index([branchId, orderType])
+  @@index([branchId, createdAt])
+}
+
+model OrderItem {
+  id        String @id @default(uuid())
+  orderId   String
+  productId String
+
+  productName String
+  quantity    Int
+  unitPrice   Decimal @db.Decimal(12, 2)
+  subtotal    Decimal @db.Decimal(12, 2)
+
+  createdAt DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  product Product @relation("ProductOrderItems", fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model Payment {
+  id             String @id @default(uuid())
+  orderId        String
+  organizationId String
+  branchId       String
+  createdById    String
+
+  method         PaymentMethod
+  amount         Decimal       @db.Decimal(12, 2)
+  amountReceived Decimal       @db.Decimal(12, 2)
+  changeAmount   Decimal       @default(0) @db.Decimal(12, 2)
+  currency       String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  order Order @relation("OrderPayments", fields: [orderId], references: [id])
+
+  organization Organization @relation("OrganizationPayments", fields: [organizationId], references: [id])
+
+  branch Branch @relation("BranchPayments", fields: [branchId], references: [id])
+
+  @@index([orderId])
+  @@index([organizationId])
+  @@index([branchId])
+  @@index([branchId, createdAt])
+}
+
+model Table {
+  id             String @id @default(uuid())
+  organizationId String
+  branchId       String
+
+  name               String
+  capacity           Int
+  location           String?
+  photoUrl           String?
+  qrToken            String        @unique
+  customerSelectable Boolean       @default(true)
+  status             TableStatus   @default(AVAILABLE)
+  isActive           Boolean       @default(true)
+  orders             Order[]       @relation("TableOrders")
+  reservations       Reservation[] @relation("TableReservations")
+  queueEntries       QueueEntry[]  @relation("TableQueueEntries")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization Organization @relation("OrganizationTables", fields: [organizationId], references: [id])
+
+  branch Branch @relation("BranchTables", fields: [branchId], references: [id])
+
+  @@unique([branchId, name])
+  @@index([organizationId])
+  @@index([branchId])
+  @@index([branchId, status])
+  @@index([branchId, customerSelectable])
+}
+
+model Reservation {
+  id             String  @id @default(uuid())
+  organizationId String
+  branchId       String
+  tableId        String?
+
+  publicToken String @unique
+
+  customerName  String
+  customerPhone String?
+  guestCount    Int
+
+  startAt DateTime
+  endAt   DateTime
+
+  status ReservationStatus @default(PENDING)
+  notes  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization Organization @relation("OrganizationReservations", fields: [organizationId], references: [id])
+
+  branch Branch @relation("BranchReservations", fields: [branchId], references: [id])
+
+  table Table? @relation("TableReservations", fields: [tableId], references: [id])
+
+  @@index([organizationId])
+  @@index([branchId])
+  @@index([branchId, startAt])
+  @@index([branchId, status])
+  @@index([tableId, startAt])
+}
+
+model QueueEntry {
+  id             String  @id @default(uuid())
+  organizationId String
+  branchId       String
+  tableId        String?
+
+  publicToken String @unique
+
+  queueDate   DateTime @db.Date
+  queueNumber Int
+
+  customerName  String
+  customerPhone String?
+  guestCount    Int
+
+  status QueueStatus @default(WAITING)
+
+  joinedAt DateTime  @default(now())
+  calledAt DateTime?
+  seatedAt DateTime?
+
+  notes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization Organization @relation("OrganizationQueueEntries", fields: [organizationId], references: [id])
+
+  branch Branch @relation("BranchQueueEntries", fields: [branchId], references: [id])
+
+  table Table? @relation("TableQueueEntries", fields: [tableId], references: [id])
+
+  @@unique([branchId, queueDate, queueNumber])
+  @@index([organizationId])
+  @@index([branchId, status])
+  @@index([branchId, joinedAt])
+  @@index([branchId, queueNumber])
+  @@index([tableId])
 }
