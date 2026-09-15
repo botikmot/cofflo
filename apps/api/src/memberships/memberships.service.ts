@@ -15,10 +15,7 @@ import { MembershipRole } from '@prisma/client';
 export class MembershipsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(
-    organizationId: string,
-    dto: CreateMembershipDto,
-  ) {
+  async create(organizationId: string, dto: CreateMembershipDto) {
     const organization = await this.prisma.organization.findUnique({
       where: {
         id: organizationId,
@@ -64,14 +61,13 @@ export class MembershipsService {
         },
       });
     } else {
-      const existingMembership =
-        await this.prisma.membership.findFirst({
-          where: {
-            userId: existingUser?.id,
-            organizationId,
-            branchId: dto.branchId ?? null,
-          },
-        });
+      const existingMembership = await this.prisma.membership.findFirst({
+        where: {
+          userId: existingUser?.id,
+          organizationId,
+          branchId: dto.branchId ?? null,
+        },
+      });
 
       if (existingMembership) {
         throw new ConflictException(
@@ -198,48 +194,42 @@ export class MembershipsService {
     return membership;
   }
 
-  async findOneByOrganization(
-    organizationId: string,
-    membershipId: string,
-  ) {
-    const membership =
-      await this.prisma.membership.findFirst({
-        where: {
-          id: membershipId,
-          organizationId,
-        },
-        include: {
-          user: {
-            select: {
-              id: true,
-              email: true,
-              firstName: true,
-              lastName: true,
-              status: true,
-              createdAt: true,
-            },
-          },
-          organization: {
-            select: {
-              id: true,
-              name: true,
-              slug: true,
-            },
-          },
-          branch: {
-            select: {
-              id: true,
-              name: true,
-              slug: true,
-            },
+  async findOneByOrganization(organizationId: string, membershipId: string) {
+    const membership = await this.prisma.membership.findFirst({
+      where: {
+        id: membershipId,
+        organizationId,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            status: true,
+            createdAt: true,
           },
         },
-      });
+        organization: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+          },
+        },
+        branch: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+          },
+        },
+      },
+    });
 
     if (!membership) {
-      throw new NotFoundException(
-        'Membership not found in this organization',
-      );
+      throw new NotFoundException('Membership not found in this organization');
     }
 
     return membership;
@@ -251,30 +241,26 @@ export class MembershipsService {
     dto: UpdateMembershipDto,
     currentUserId: string,
   ) {
-    const membership =
-      await this.prisma.membership.findFirst({
-        where: {
-          id: membershipId,
-          organizationId,
-        },
-        include: {
-          user: true,
-        },
-      });
+    const membership = await this.prisma.membership.findFirst({
+      where: {
+        id: membershipId,
+        organizationId,
+      },
+      include: {
+        user: true,
+      },
+    });
 
     if (!membership) {
-      throw new NotFoundException(
-        'Membership not found in this organization',
-      );
+      throw new NotFoundException('Membership not found in this organization');
     }
 
-    const currentUserMembership =
-      await this.prisma.membership.findFirst({
-        where: {
-          userId: currentUserId,
-          organizationId,
-        },
-      });
+    const currentUserMembership = await this.prisma.membership.findFirst({
+      where: {
+        userId: currentUserId,
+        organizationId,
+      },
+    });
 
     if (!currentUserMembership) {
       throw new ForbiddenException(
@@ -282,8 +268,7 @@ export class MembershipsService {
       );
     }
 
-    const isTargetOwner =
-      membership.role === MembershipRole.OWNER;
+    const isTargetOwner = membership.role === MembershipRole.OWNER;
 
     const isCurrentUserOwner =
       currentUserMembership.role === MembershipRole.OWNER;
@@ -296,18 +281,13 @@ export class MembershipsService {
     }
 
     // Prevent changing the only OWNER into another role.
-    if (
-      isTargetOwner &&
-      dto.role &&
-      dto.role !== MembershipRole.OWNER
-    ) {
-      const ownerCount =
-        await this.prisma.membership.count({
-          where: {
-            organizationId,
-            role: MembershipRole.OWNER,
-          },
-        });
+    if (isTargetOwner && dto.role && dto.role !== MembershipRole.OWNER) {
+      const ownerCount = await this.prisma.membership.count({
+        where: {
+          organizationId,
+          role: MembershipRole.OWNER,
+        },
+      });
 
       if (ownerCount <= 1) {
         throw new BadRequestException(
@@ -316,10 +296,7 @@ export class MembershipsService {
       }
     }
 
-    if (
-      dto.branchId !== undefined &&
-      dto.branchId !== null
-    ) {
+    if (dto.branchId !== undefined && dto.branchId !== null) {
       const branch = await this.prisma.branch.findFirst({
         where: {
           id: dto.branchId,
@@ -335,26 +312,20 @@ export class MembershipsService {
     }
 
     const nextBranchId =
-      dto.branchId !== undefined
-        ? dto.branchId
-        : membership.branchId;
+      dto.branchId !== undefined ? dto.branchId : membership.branchId;
 
-    const nextRole =
-      dto.role !== undefined
-        ? dto.role
-        : membership.role;
+    const nextRole = dto.role !== undefined ? dto.role : membership.role;
 
-    const duplicateMembership =
-      await this.prisma.membership.findFirst({
-        where: {
-          userId: membership.userId,
-          organizationId,
-          branchId: nextBranchId,
-          NOT: {
-            id: membershipId,
-          },
+    const duplicateMembership = await this.prisma.membership.findFirst({
+      where: {
+        userId: membership.userId,
+        organizationId,
+        branchId: nextBranchId,
+        NOT: {
+          id: membershipId,
         },
-      });
+      },
+    });
 
     if (duplicateMembership) {
       throw new ConflictException(
@@ -404,27 +375,23 @@ export class MembershipsService {
     membershipId: string,
     currentUserId: string,
   ) {
-    const membership =
-      await this.prisma.membership.findFirst({
-        where: {
-          id: membershipId,
-          organizationId,
-        },
-      });
+    const membership = await this.prisma.membership.findFirst({
+      where: {
+        id: membershipId,
+        organizationId,
+      },
+    });
 
     if (!membership) {
-      throw new NotFoundException(
-        'Membership not found in this organization',
-      );
+      throw new NotFoundException('Membership not found in this organization');
     }
 
-    const currentUserMembership =
-      await this.prisma.membership.findFirst({
-        where: {
-          userId: currentUserId,
-          organizationId,
-        },
-      });
+    const currentUserMembership = await this.prisma.membership.findFirst({
+      where: {
+        userId: currentUserId,
+        organizationId,
+      },
+    });
 
     if (!currentUserMembership) {
       throw new ForbiddenException(
@@ -438,16 +405,13 @@ export class MembershipsService {
       );
     }
 
-    if (
-      membership.role === MembershipRole.OWNER
-    ) {
-      const ownerCount =
-        await this.prisma.membership.count({
-          where: {
-            organizationId,
-            role: MembershipRole.OWNER,
-          },
-        });
+    if (membership.role === MembershipRole.OWNER) {
+      const ownerCount = await this.prisma.membership.count({
+        where: {
+          organizationId,
+          role: MembershipRole.OWNER,
+        },
+      });
 
       if (ownerCount <= 1) {
         throw new BadRequestException(
@@ -455,10 +419,7 @@ export class MembershipsService {
         );
       }
 
-      if (
-        currentUserMembership.role !==
-        MembershipRole.OWNER
-      ) {
+      if (currentUserMembership.role !== MembershipRole.OWNER) {
         throw new ForbiddenException(
           'Only the organization owner can remove another owner',
         );
@@ -475,5 +436,4 @@ export class MembershipsService {
       message: 'Membership removed successfully',
     };
   }
-
 }

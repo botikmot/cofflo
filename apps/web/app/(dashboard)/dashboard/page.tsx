@@ -1,242 +1,401 @@
-'use client';
+"use client";
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { ClipboardList, Coffee, ShoppingBag, Users } from "lucide-react";
 
-import { useAuthStore } from '@/stores/auth-store';
-import { ThemeToggle } from '@/components/theme-toggle';
+import { useWorkspace } from "@/hooks/auth/use-workspace";
+import { useDashboard } from "@/hooks/dashboard/use-dashboard";
+import type { DashboardTable } from "@/types/dashboard";
+
+import {
+  calculateOccupiedTables,
+  calculateTodaySales,
+  getOrderStatusCounts,
+  getRecentOrders,
+  getTodayOrders,
+} from "@/lib/dashboard";
+
+import { CoffeeLoading } from "@/components/ui/coffee-loading";
+//import { CoffeeVisual } from "@/components/dashboard/coffee-visual";
 
 export default function DashboardPage() {
-  const router = useRouter();
+  const { activeMembership, isLoading: workspaceLoading } = useWorkspace();
 
-  const user = useAuthStore((state) => state.user);
-  const hydrated = useAuthStore((state) => state.hydrated);
-  const hydrate = useAuthStore((state) => state.hydrate);
+  const organizationId = activeMembership?.organization?.id ?? null;
+  const branchId = activeMembership?.branch?.id ?? null;
 
-  useEffect(() => {
-    if (!hydrated) {
-      hydrate();
-    }
-  }, [hydrated, hydrate]);
+  const {
+    data,
+    isLoading: dashboardLoading,
+    isError,
+    error,
+  } = useDashboard({
+    organizationId: organizationId ?? undefined,
+    branchId: branchId ?? undefined,
+  });
 
-  useEffect(() => {
-    if (hydrated && !user) {
-      router.replace('/login');
-    }
-  }, [hydrated, user, router]);
+  console.log("activeMembership?::", activeMembership);
 
-  if (!hydrated || !user) {
+  if (workspaceLoading || dashboardLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p className="text-sm text-muted-foreground">
-          Loading Cofflo...
+      <div className="pt-6">
+        <CoffeeLoading />
+      </div>
+    );
+  }
+
+  if (!activeMembership) {
+    return (
+      <div className="rounded-[28px] border border-[#E7DCCE] bg-[#FFFDF9] p-8 text-center">
+        <p className="text-sm font-medium text-[#6F4E37]">
+          No workspace found.
         </p>
       </div>
     );
   }
 
-  const firstMembership = user.memberships?.[0];
-  const organization = firstMembership?.organization;
-  const branch = firstMembership?.branch;
+  if (!activeMembership.branch) {
+    return (
+      <div className="rounded-[28px] border border-[#E7DCCE] bg-[#FFFDF9] p-8 text-center">
+        <p className="text-sm font-medium text-[#6F4E37]">
+          No branch is assigned to this account.
+        </p>
 
-  return (
-    <main className="min-h-screen bg-muted/30 p-6 md:p-8">
-      <div className="mx-auto max-w-7xl">
-        <div className="mb-8 flex items-start justify-between gap-4">
-            <div>
-                <p className="text-sm text-muted-foreground">
-                {organization?.name ?? 'Your organization'}
-                </p>
-
-                <h1 className="mt-1 text-3xl font-bold tracking-tight">
-                Welcome back, {user.firstName}!
-                </h1>
-
-                <p className="mt-2 text-sm text-muted-foreground">
-                Here&apos;s what&apos;s happening with your café today.
-                </p>
-            </div>
-
-            <ThemeToggle />
-        </div>
-
-        <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <DashboardCard
-            label="Today's sales"
-            value="₱0.00"
-            description="No sales recorded yet"
-          />
-
-          <DashboardCard
-            label="Orders today"
-            value="0"
-            description="No orders recorded yet"
-          />
-
-          <DashboardCard
-            label="Products"
-            value="0"
-            description="Products will appear here"
-          />
-
-          <DashboardCard
-            label="Team members"
-            value={String(user.memberships?.length ?? 0)}
-            description="Organization members"
-          />
-        </div>
-
-        <div className="grid gap-6 lg:grid-cols-3">
-          <section className="rounded-2xl border bg-background p-6 lg:col-span-2">
-            <div className="mb-5">
-              <h2 className="text-lg font-semibold">
-                Getting started
-              </h2>
-
-              <p className="mt-1 text-sm text-muted-foreground">
-                Set up your café workspace to start using Cofflo.
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              <GettingStartedItem
-                number="1"
-                title="Set up your organization"
-                description="Review your café business information."
-                completed={Boolean(organization)}
-              />
-
-              <GettingStartedItem
-                number="2"
-                title="Add your branches"
-                description="Create and manage your café locations."
-                completed={Boolean(branch)}
-              />
-
-              <GettingStartedItem
-                number="3"
-                title="Invite your team"
-                description="Add staff members who will use Cofflo."
-                completed={false}
-              />
-
-              <GettingStartedItem
-                number="4"
-                title="Add your products"
-                description="Set up your menu and product catalog."
-                completed={false}
-              />
-            </div>
-          </section>
-
-          <section className="rounded-2xl border bg-background p-6">
-            <h2 className="text-lg font-semibold">
-              Workspace
-            </h2>
-
-            <div className="mt-5 space-y-4">
-              <InfoRow
-                label="Organization"
-                value={organization?.name ?? 'Not available'}
-              />
-
-              <InfoRow
-                label="Branch"
-                value={branch?.name ?? 'All branches'}
-              />
-
-              <InfoRow
-                label="Role"
-                value={firstMembership?.role ?? 'Member'}
-              />
-
-              <InfoRow
-                label="Email"
-                value={user.email}
-              />
-            </div>
-          </section>
-        </div>
-      </div>
-    </main>
-  );
-}
-
-function DashboardCard({
-  label,
-  value,
-  description,
-}: {
-  label: string;
-  value: string;
-  description: string;
-}) {
-  return (
-    <div className="rounded-2xl border bg-background p-5">
-      <p className="text-sm text-muted-foreground">
-        {label}
-      </p>
-
-      <p className="mt-3 text-2xl font-bold tracking-tight">
-        {value}
-      </p>
-
-      <p className="mt-1 text-xs text-muted-foreground">
-        {description}
-      </p>
-    </div>
-  );
-}
-
-function GettingStartedItem({
-  number,
-  title,
-  description,
-  completed,
-}: {
-  number: string;
-  title: string;
-  description: string;
-  completed: boolean;
-}) {
-  return (
-    <div className="flex items-start gap-3">
-      <div
-        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${
-          completed
-            ? 'bg-primary text-primary-foreground'
-            : 'bg-muted text-muted-foreground'
-        }`}
-      >
-        {completed ? '✓' : number}
-      </div>
-
-      <div>
-        <p className="font-medium">{title}</p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {description}
+        <p className="mt-1 text-sm text-[#94877A]">
+          Please select a branch or contact your workspace administrator.
         </p>
       </div>
+    );
+  }
+
+  if (isError || !data) {
+    return (
+      <div className="rounded-[28px] border border-[#E7DCCE] bg-[#FFFDF9] p-8 text-center">
+        <p className="text-sm font-medium text-[#6F4E37]">
+          We couldn&apos;t prepare your dashboard.
+        </p>
+
+        <p className="mt-1 text-sm text-[#94877A]">
+          Please refresh and try again.
+        </p>
+      </div>
+    );
+  }
+
+  const todayOrders = getTodayOrders(data.orders);
+
+  const todaySales = calculateTodaySales(data.orders);
+
+  const tableStats = calculateOccupiedTables(data.tables);
+
+  const recentOrders = getRecentOrders(todayOrders);
+
+  const orderStatusCounts = getOrderStatusCounts(todayOrders);
+
+  return (
+    <div className="space-y-8 pt-4">
+      {/* HERO */}
+      <section className="relative overflow-hidden rounded-[32px] border border-[#E7DCCE] bg-[#F0E6DA] shadow-[0_16px_45px_rgba(70,45,25,0.06)]">
+        <div className="grid lg:grid-cols-[1.08fr_0.92fr]">
+          <div className="relative z-10 p-6 sm:p-8">
+            <p className="text-sm font-medium uppercase tracking-[0.16em] text-[#896B53]">
+              Good morning
+            </p>
+
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[#2B2118] sm:text-4xl">
+              Ready for a great day?
+            </h1>
+
+            <p className="mt-3 max-w-xl text-sm leading-6 text-[#75685C] sm:text-base">
+              Here’s a quick look at what’s happening across your café today.
+            </p>
+          </div>
+
+          {/* <div className="relative min-h-[220px]">
+            <CoffeeVisual />
+          </div> */}
+        </div>
+      </section>
+
+      {/* STATS */}
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <DashboardStat
+          label="Today's sales"
+          value={`₱${todaySales.toLocaleString("en-PH", {
+            minimumFractionDigits: 2,
+          })}`}
+          detail={`${todayOrders.length} orders today`}
+          icon={Coffee}
+        />
+
+        <DashboardStat
+          label="Orders"
+          value={todayOrders.length.toString()}
+          detail="Orders received today"
+          icon={ShoppingBag}
+        />
+
+        <DashboardStat
+          label="Tables"
+          value={`${tableStats.occupied} / ${tableStats.total}`}
+          detail="Currently occupied"
+          icon={ClipboardList}
+        />
+
+        <DashboardStat
+          label="Active guests"
+          value="—"
+          detail="Queue integration next"
+          icon={Users}
+        />
+      </section>
+
+      {/* CONTENT */}
+      <section className="grid gap-5 xl:grid-cols-[1.5fr_1fr]">
+        <RecentOrders orders={recentOrders} />
+
+        <TablePulse tables={data.tables} />
+      </section>
+
+      <OrderStatusOverview counts={orderStatusCounts} />
     </div>
   );
 }
 
-function InfoRow({
-  label,
-  value,
-}: {
+type DashboardStatProps = {
   label: string;
   value: string;
+  detail: string;
+  icon: React.ComponentType<{
+    className?: string;
+  }>;
+};
+
+function DashboardStat({
+  label,
+  value,
+  detail,
+  icon: Icon,
+}: DashboardStatProps) {
+  return (
+    <div
+      className="
+        group rounded-[24px]
+        border border-[#E7DCCE]
+        bg-[#FFFDF9]
+        p-5
+        shadow-[0_10px_35px_rgba(70,45,25,0.045)]
+        transition-all duration-200
+        hover:-translate-y-0.5
+        hover:shadow-[0_16px_40px_rgba(70,45,25,0.08)]
+      "
+    >
+      <div className="flex items-start justify-between">
+        <p className="text-sm text-[#8B7D70]">{label}</p>
+
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#F5ECE3] text-[#6F4E37]">
+          <Icon className="h-4 w-4" />
+        </div>
+      </div>
+
+      <p className="mt-3 text-3xl font-semibold tracking-tight text-[#2B2118]">
+        {value}
+      </p>
+
+      <p className="mt-2 text-xs font-medium text-[#7D6D5E]">{detail}</p>
+    </div>
+  );
+}
+
+function RecentOrders({
+  orders,
+}: {
+  orders: ReturnType<typeof getRecentOrders>;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 border-b pb-3 last:border-b-0 last:pb-0">
-      <span className="text-sm text-muted-foreground">
-        {label}
-      </span>
+    <div className="rounded-[28px] border border-[#E7DCCE] bg-[#FFFDF9] p-5 shadow-[0_10px_35px_rgba(70,45,25,0.045)] sm:p-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-wider text-[#9A8C80]">
+            Live activity
+          </p>
 
-      <span className="max-w-[60%] text-right text-sm font-medium">
-        {value}
-      </span>
+          <h2 className="mt-1 text-lg font-semibold">Recent orders</h2>
+        </div>
+
+        <span className="rounded-full bg-[#EEF3EA] px-3 py-1 text-xs font-medium text-[#587052]">
+          Live
+        </span>
+      </div>
+
+      <div className="mt-5 space-y-3">
+        {orders.length === 0 ? (
+          <div className="rounded-2xl bg-[#FAF6F1] p-6 text-center">
+            <p className="text-sm font-medium text-[#6F6257]">Quiet counter</p>
+
+            <p className="mt-1 text-xs text-[#9B8E82]">No orders yet today.</p>
+          </div>
+        ) : (
+          orders.map((order) => (
+            <div
+              key={order.id}
+              className="flex items-center justify-between rounded-2xl bg-[#FAF6F1] p-4"
+            >
+              <div className="min-w-0">
+                <p className="text-sm font-semibold">{order.orderNumber}</p>
+
+                <p className="mt-0.5 truncate text-xs text-[#8A7D71]">
+                  {order.table?.name ?? order.orderType.replace("_", " ")}
+                </p>
+              </div>
+
+              <div className="text-right">
+                <p className="text-sm font-semibold">
+                  ₱
+                  {Number(order.total).toLocaleString("en-PH", {
+                    minimumFractionDigits: 2,
+                  })}
+                </p>
+
+                <p className="mt-0.5 text-xs text-[#7D6F63]">{order.status}</p>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
     </div>
+  );
+}
+
+function TablePulse({ tables }: { tables: DashboardTable[] }) {
+  return (
+    <div className="rounded-[28px] border border-[#E7DCCE] bg-[#2B2118] p-6 text-[#FFFDF9] shadow-[0_16px_40px_rgba(43,33,24,0.14)]">
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-wider text-[#CDB9A5]">
+            Floor status
+          </p>
+
+          <h2 className="mt-1 text-lg font-semibold">Table pulse</h2>
+        </div>
+
+        <div className="rounded-full bg-white/10 px-3 py-1 text-xs text-[#D9C9BA]">
+          {tables.filter((table) => table.isActive).length} active
+        </div>
+      </div>
+
+      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
+        {tables.map((table) => {
+          const status = table.status.toUpperCase();
+
+          const isOccupied = status === "OCCUPIED";
+          const isReserved = status === "RESERVED";
+          const isAvailable = status === "AVAILABLE";
+
+          return (
+            <div
+              key={table.id}
+              className="rounded-2xl border border-white/10 bg-white/5 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/10"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="truncate text-base font-semibold">
+                  {table.name}
+                </div>
+
+                <span
+                  className={[
+                    "h-2 w-2 shrink-0 rounded-full",
+                    isOccupied
+                      ? "bg-[#C98B6B]"
+                      : isReserved
+                        ? "bg-[#D2B27B]"
+                        : isAvailable
+                          ? "bg-[#8FA383]"
+                          : "bg-[#9A8E84]",
+                  ].join(" ")}
+                />
+              </div>
+
+              <div className="mt-2 text-xs uppercase tracking-wide text-[#CDB9A5]">
+                {table.status}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+type OrderStatusCounts = ReturnType<typeof getOrderStatusCounts>;
+
+function OrderStatusOverview({ counts }: { counts: OrderStatusCounts }) {
+  const statuses = [
+    {
+      key: "PENDING",
+      label: "Pending",
+      value: counts.PENDING,
+    },
+    {
+      key: "CONFIRMED",
+      label: "Confirmed",
+      value: counts.CONFIRMED,
+    },
+    {
+      key: "PREPARING",
+      label: "Preparing",
+      value: counts.PREPARING,
+    },
+    {
+      key: "READY",
+      label: "Ready",
+      value: counts.READY,
+    },
+    {
+      key: "COMPLETED",
+      label: "Completed",
+      value: counts.COMPLETED,
+    },
+    {
+      key: "CANCELLED",
+      label: "Cancelled",
+      value: counts.CANCELLED,
+    },
+  ];
+
+  const total = statuses.reduce((sum, status) => sum + status.value, 0);
+
+  return (
+    <section className="rounded-[28px] border border-[#E7DCCE] bg-[#FFFDF9] p-5 shadow-[0_10px_35px_rgba(70,45,25,0.045)] sm:p-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-wider text-[#9A8C80]">
+            Order flow
+          </p>
+
+          <h2 className="mt-1 text-lg font-semibold text-[#2B2118]">
+            Today&apos;s order status
+          </h2>
+        </div>
+
+        <span className="rounded-full bg-[#F5ECE3] px-3 py-1 text-xs font-medium text-[#6F4E37]">
+          {total} total
+        </span>
+      </div>
+
+      <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        {statuses.map((status) => (
+          <div
+            key={status.key}
+            className="rounded-2xl border border-[#EEE4DA] bg-[#FAF6F1] p-4"
+          >
+            <p className="text-xs font-medium text-[#8B7D70]">{status.label}</p>
+
+            <p className="mt-2 text-2xl font-semibold tracking-tight text-[#2B2118]">
+              {status.value}
+            </p>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }

@@ -75,9 +75,7 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new UnauthorizedException(
-        'Invalid email or password',
-      );
+      throw new UnauthorizedException('Invalid email or password');
     }
 
     const passwordMatches = await bcrypt.compare(
@@ -86,15 +84,11 @@ export class AuthService {
     );
 
     if (!passwordMatches) {
-      throw new UnauthorizedException(
-        'Invalid email or password',
-      );
+      throw new UnauthorizedException('Invalid email or password');
     }
 
     if (user.status !== 'ACTIVE') {
-      throw new UnauthorizedException(
-        'User account is not active',
-      );
+      throw new UnauthorizedException('User account is not active');
     }
 
     const payload = {
@@ -102,9 +96,7 @@ export class AuthService {
       email: user.email,
     };
 
-    const accessToken = await this.jwtService.signAsync(
-      payload,
-    );
+    const accessToken = await this.jwtService.signAsync(payload);
 
     return {
       accessToken,
@@ -131,6 +123,7 @@ export class AuthService {
               select: {
                 id: true,
                 name: true,
+                description: true,
                 slug: true,
                 status: true,
               },
@@ -167,41 +160,41 @@ export class AuthService {
     organizationId: string,
     branchId?: string,
   ) {
-    const membership =
-      await this.prisma.membership.findFirst({
-        where: {
-          userId,
-          organizationId,
-          ...(branchId
-            ? {
-                branchId,
-              }
-            : {}),
-        },
-        select: {
-          id: true,
-          userId: true,
-          organizationId: true,
-          branchId: true,
-          role: true,
-          organization: {
-            select: {
-              id: true,
-              name: true,
-              slug: true,
-              status: true,
-            },
-          },
-          branch: {
-            select: {
-              id: true,
-              name: true,
-              slug: true,
-              isActive: true,
-            },
+    const membership = await this.prisma.membership.findFirst({
+      where: {
+        userId,
+        organizationId,
+        ...(branchId
+          ? {
+              branchId,
+            }
+          : {}),
+      },
+      select: {
+        id: true,
+        userId: true,
+        organizationId: true,
+        branchId: true,
+        role: true,
+        organization: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            slug: true,
+            status: true,
           },
         },
-      });
+        branch: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            isActive: true,
+          },
+        },
+      },
+    });
 
     if (!membership) {
       throw new ForbiddenException(
@@ -211,5 +204,4 @@ export class AuthService {
 
     return membership;
   }
-
 }

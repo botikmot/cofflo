@@ -97,6 +97,16 @@ enum QueueStatus {
   NO_SHOW
 }
 
+enum OrderSource {
+  STAFF
+  CUSTOMER
+}
+
+enum TableSessionStatus {
+  OPEN
+  CLOSED
+}
+
 model Organization {
   id       String             @id @default(uuid())
   name     String
@@ -124,6 +134,7 @@ model Organization {
   tables             Table[]             @relation("OrganizationTables")
   reservations       Reservation[]       @relation("OrganizationReservations")
   queueEntries       QueueEntry[]        @relation("OrganizationQueueEntries")
+  tableSessions      TableSession[]      @relation("OrganizationTableSessions")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -161,6 +172,7 @@ model Branch {
   tables             Table[]             @relation("BranchTables")
   reservations       Reservation[]       @relation("BranchReservations")
   queueEntries       QueueEntry[]        @relation("BranchQueueEntries")
+  tableSessions      TableSession[]      @relation("BranchTableSessions")
 
   @@unique([organizationId, slug])
   @@index([organizationId])
@@ -319,10 +331,10 @@ model InventoryMovement {
 }
 
 model Order {
-  id             String @id @default(uuid())
+  id             String  @id @default(uuid())
   organizationId String
   branchId       String
-  createdById    String
+  createdById    String?
 
   orderNumber String @unique
 
@@ -331,14 +343,19 @@ model Order {
   paymentStatus PaymentStatus  @default(UNPAID)
   paymentMethod PaymentMethod?
   payments      Payment[]      @relation("OrderPayments")
+  publicToken   String?        @unique
+  source        OrderSource    @default(STAFF)
 
-  subtotal Decimal @db.Decimal(12, 2)
-  discount Decimal @default(0) @db.Decimal(12, 2)
-  tax      Decimal @default(0) @db.Decimal(12, 2)
-  total    Decimal @db.Decimal(12, 2)
-  currency String
-  tableId  String?
-  table    Table?  @relation("TableOrders", fields: [tableId], references: [id])
+  subtotal       Decimal @db.Decimal(12, 2)
+  discount       Decimal @default(0) @db.Decimal(12, 2)
+  tax            Decimal @default(0) @db.Decimal(12, 2)
+  total          Decimal @db.Decimal(12, 2)
+  currency       String
+  tableId        String?
+  table          Table?  @relation("TableOrders", fields: [tableId], references: [id])
+  tableSessionId String?
+
+  tableSession TableSession? @relation("TableSessionOrders", fields: [tableSessionId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -354,6 +371,8 @@ model Order {
   @@index([branchId, status])
   @@index([branchId, orderType])
   @@index([branchId, createdAt])
+  @@index([branchId, source])
+  @@index([branchId, tableSessionId])
 }
 
 model OrderItem {
@@ -413,13 +432,14 @@ model Table {
   capacity           Int
   location           String?
   photoUrl           String?
-  qrToken            String        @unique
-  customerSelectable Boolean       @default(true)
-  status             TableStatus   @default(AVAILABLE)
-  isActive           Boolean       @default(true)
-  orders             Order[]       @relation("TableOrders")
-  reservations       Reservation[] @relation("TableReservations")
-  queueEntries       QueueEntry[]  @relation("TableQueueEntries")
+  qrToken            String         @unique
+  customerSelectable Boolean        @default(true)
+  status             TableStatus    @default(AVAILABLE)
+  isActive           Boolean        @default(true)
+  orders             Order[]        @relation("TableOrders")
+  reservations       Reservation[]  @relation("TableReservations")
+  queueEntries       QueueEntry[]   @relation("TableQueueEntries")
+  sessions           TableSession[] @relation("TableSessions")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -507,4 +527,29 @@ model QueueEntry {
   @@index([branchId, joinedAt])
   @@index([branchId, queueNumber])
   @@index([tableId])
+}
+
+model TableSession {
+  id             String @id @default(uuid())
+  organizationId String
+  branchId       String
+  tableId        String
+
+  status TableSessionStatus @default(OPEN)
+
+  openedAt DateTime  @default(now())
+  closedAt DateTime?
+
+  organization Organization @relation("OrganizationTableSessions", fields: [organizationId], references: [id])
+  branch       Branch       @relation("BranchTableSessions", fields: [branchId], references: [id])
+  table        Table        @relation("TableSessions", fields: [tableId], references: [id])
+
+  orders Order[] @relation("TableSessionOrders")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId, branchId])
+  @@index([tableId, status])
+  @@index([branchId, status])
 }

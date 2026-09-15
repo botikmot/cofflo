@@ -9,36 +9,24 @@ import { PrismaService } from '../prisma/prisma.service';
 
 import { CreateTableDto } from './dto/create-table.dto';
 import { UpdateTableDto } from './dto/update-table.dto';
-import {
-  UpdateTableStatusDto,
-} from './dto/update-table-status.dto';
+import { UpdateTableStatusDto } from './dto/update-table-status.dto';
 
 @Injectable()
 export class TablesService {
-  constructor(
-    private readonly prisma: PrismaService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-  async create(
-    organizationId: string,
-    branchId: string,
-    dto: CreateTableDto,
-  ) {
-    await this.validateBranch(
-      organizationId,
-      branchId,
-    );
+  async create(organizationId: string, branchId: string, dto: CreateTableDto) {
+    await this.validateBranch(organizationId, branchId);
 
-    const existingTable =
-      await this.prisma.table.findFirst({
-        where: {
-          branchId,
-          name: dto.name,
-        },
-        select: {
-          id: true,
-        },
-      });
+    const existingTable = await this.prisma.table.findFirst({
+      where: {
+        branchId,
+        name: dto.name,
+      },
+      select: {
+        id: true,
+      },
+    });
 
     if (existingTable) {
       throw new ConflictException(
@@ -57,8 +45,7 @@ export class TablesService {
         capacity: dto.capacity,
         location: dto.location,
         photoUrl: dto.photoUrl,
-        customerSelectable:
-          dto.customerSelectable ?? true,
+        customerSelectable: dto.customerSelectable ?? true,
 
         qrToken,
         status: 'AVAILABLE',
@@ -67,16 +54,10 @@ export class TablesService {
     });
   }
 
-  async findAll(
-    organizationId: string,
-    branchId: string,
-  ) {
-    await this.validateBranch(
-      organizationId,
-      branchId,
-    );
+  async findAll(organizationId: string, branchId: string) {
+    await this.validateBranch(organizationId, branchId);
 
-    return this.prisma.table.findMany({
+    const tables = await this.prisma.table.findMany({
       where: {
         organizationId,
         branchId,
@@ -85,27 +66,80 @@ export class TablesService {
       orderBy: {
         name: 'asc',
       },
+      include: {
+        sessions: {
+          where: {
+            status: 'OPEN',
+          },
+          orderBy: {
+            openedAt: 'desc',
+          },
+          take: 1,
+          select: {
+            id: true,
+            openedAt: true,
+            orders: {
+              where: {
+                status: {
+                  not: 'CANCELLED',
+                },
+              },
+              select: {
+                id: true,
+                total: true,
+                paymentStatus: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return tables.map((table) => {
+      const activeSession = table.sessions[0];
+
+      const orders = activeSession?.orders ?? [];
+
+      const total = orders.reduce((sum, order) => sum + Number(order.total), 0);
+
+      const outstandingTotal = orders
+        .filter((order) => order.paymentStatus === 'UNPAID')
+        .reduce((sum, order) => sum + Number(order.total), 0);
+
+      return {
+        id: table.id,
+        name: table.name,
+        capacity: table.capacity,
+        location: table.location,
+        photoUrl: table.photoUrl,
+        customerSelectable: table.customerSelectable,
+        status: table.status,
+        isActive: table.isActive,
+
+        activeSession: activeSession
+          ? {
+              id: activeSession.id,
+              openedAt: activeSession.openedAt,
+              orderCount: orders.length,
+              total,
+              outstandingTotal,
+            }
+          : null,
+      };
     });
   }
 
-  async findOne(
-    organizationId: string,
-    branchId: string,
-    tableId: string,
-  ) {
-    const table =
-      await this.prisma.table.findFirst({
-        where: {
-          id: tableId,
-          organizationId,
-          branchId,
-        },
-      });
+  async findOne(organizationId: string, branchId: string, tableId: string) {
+    const table = await this.prisma.table.findFirst({
+      where: {
+        id: tableId,
+        organizationId,
+        branchId,
+      },
+    });
 
     if (!table) {
-      throw new NotFoundException(
-        'Table not found.',
-      );
+      throw new NotFoundException('Table not found.');
     }
 
     return table;
@@ -117,26 +151,21 @@ export class TablesService {
     tableId: string,
     dto: UpdateTableDto,
   ) {
-    await this.findOne(
-      organizationId,
-      branchId,
-      tableId,
-    );
+    await this.findOne(organizationId, branchId, tableId);
 
     if (dto.name) {
-      const existingTable =
-        await this.prisma.table.findFirst({
-          where: {
-            branchId,
-            name: dto.name,
-            NOT: {
-              id: tableId,
-            },
+      const existingTable = await this.prisma.table.findFirst({
+        where: {
+          branchId,
+          name: dto.name,
+          NOT: {
+            id: tableId,
           },
-          select: {
-            id: true,
-          },
-        });
+        },
+        select: {
+          id: true,
+        },
+      });
 
       if (existingTable) {
         throw new ConflictException(
@@ -162,10 +191,8 @@ export class TablesService {
         ...(dto.photoUrl !== undefined && {
           photoUrl: dto.photoUrl,
         }),
-        ...(dto.customerSelectable !==
-          undefined && {
-          customerSelectable:
-            dto.customerSelectable,
+        ...(dto.customerSelectable !== undefined && {
+          customerSelectable: dto.customerSelectable,
         }),
       },
     });
@@ -177,16 +204,10 @@ export class TablesService {
     tableId: string,
     dto: UpdateTableStatusDto,
   ) {
-    const table = await this.findOne(
-      organizationId,
-      branchId,
-      tableId,
-    );
+    const table = await this.findOne(organizationId, branchId, tableId);
 
     if (!table.isActive) {
-      throw new ConflictException(
-        'Archived tables cannot change status.',
-      );
+      throw new ConflictException('Archived tables cannot change status.');
     }
 
     return this.prisma.table.update({
@@ -199,16 +220,8 @@ export class TablesService {
     });
   }
 
-  async archive(
-    organizationId: string,
-    branchId: string,
-    tableId: string,
-  ) {
-    await this.findOne(
-      organizationId,
-      branchId,
-      tableId,
-    );
+  async archive(organizationId: string, branchId: string, tableId: string) {
+    await this.findOne(organizationId, branchId, tableId);
 
     return this.prisma.table.update({
       where: {
@@ -221,25 +234,19 @@ export class TablesService {
     });
   }
 
-  private async validateBranch(
-    organizationId: string,
-    branchId: string,
-  ) {
-    const branch =
-      await this.prisma.branch.findFirst({
-        where: {
-          id: branchId,
-          organizationId,
-        },
-        select: {
-          id: true,
-        },
-      });
+  private async validateBranch(organizationId: string, branchId: string) {
+    const branch = await this.prisma.branch.findFirst({
+      where: {
+        id: branchId,
+        organizationId,
+      },
+      select: {
+        id: true,
+      },
+    });
 
     if (!branch) {
-      throw new NotFoundException(
-        'Branch not found in this organization.',
-      );
+      throw new NotFoundException('Branch not found in this organization.');
     }
 
     return branch;

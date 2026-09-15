@@ -30,7 +30,7 @@ export type AuthUser = {
   firstName: string;
   lastName: string;
   status: string;
-  memberships: Membership[];
+  memberships: AuthMembership[];
 };
 
 export type LoginResponse = {
@@ -40,3 +40,27 @@ export type LoginResponse = {
 
 export type MeResponse = AuthUser;
 
+export type AuthMembership = {
+  id: string;
+  userId: string;
+  organizationId: string;
+  branchId: string;
+  role: string;
+  createdAt: string;
+  updatedAt: string;
+  organization: {
+    id: string;
+    name: string;
+    description: string;
+    slug: string;
+    status: string;
+  };
+  branch: {
+    id: string;
+    name: string;
+    slug: string;
+    isActive: boolean;
+  };
+};
+
+export type AuthMeResponse = AuthUser;

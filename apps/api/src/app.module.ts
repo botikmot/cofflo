@@ -16,6 +16,7 @@ import { TablesModule } from './tables/tables.module';
 import { PublicModule } from './public/public.module';
 import { ReservationsModule } from './reservations/reservations.module';
 import { QueueModule } from './queue/queue.module';
+import { TableSessionsModule } from './table-sessions/table-sessions.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { QueueModule } from './queue/queue.module';
     PublicModule,
     ReservationsModule,
     QueueModule,
+    TableSessionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

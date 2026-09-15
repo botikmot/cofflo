@@ -1,14 +1,38 @@
 import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 
 import { PublicService } from './public.service';
+import { OrdersService } from '../orders/orders.service';
+import { CreatePublicOrderDto } from './dto/create-public-order.dto';
 
 @Controller('public')
 export class PublicController {
-  constructor(private readonly publicService: PublicService) {}
+  constructor(
+    private readonly publicService: PublicService,
+    private readonly ordersService: OrdersService,
+  ) {}
 
   @Get('tables/:qrToken')
   async getTableByQrToken(@Param('qrToken') qrToken: string) {
     return this.publicService.getTableByQrToken(qrToken);
+  }
+
+  @Get('branches/:branchId')
+  async getPublicBranch(@Param('branchId') branchId: string) {
+    const branch = await this.publicService.getPublicBranch(branchId);
+
+    return {
+      branch: {
+        id: branch.id,
+        name: branch.name,
+        slug: branch.slug,
+      },
+      organization: {
+        id: branch.organization.id,
+        name: branch.organization.name,
+        slug: branch.organization.slug,
+        currency: branch.organization.currency,
+      },
+    };
   }
 
   @Get('branches/:branchId/reservation-availability')
@@ -60,6 +84,49 @@ export class PublicController {
     },
   ) {
     return this.publicService.joinPublicQueue(branchId, body);
+  }
+
+  @Post('branches/:branchId/orders')
+  async createPublicOrder(
+    @Param('branchId') branchId: string,
+    @Body() dto: CreatePublicOrderDto,
+  ) {
+    const branch = await this.publicService.getPublicBranch(branchId);
+
+    const order = await this.ordersService.createPublic(
+      branch.organizationId,
+      branch.id,
+      dto,
+    );
+
+    return {
+      publicToken: order.publicToken,
+      orderNumber: order.orderNumber,
+      orderType: order.orderType,
+      status: order.status,
+      paymentStatus: order.paymentStatus,
+      currency: order.currency,
+      subtotal: order.subtotal,
+      total: order.total,
+      table: order.table
+        ? {
+            name: order.table.name,
+            capacity: order.table.capacity,
+            location: order.table.location,
+          }
+        : null,
+      items: order.items,
+    };
+  }
+
+  @Get('branches/:branchId/menu')
+  async getPublicMenu(@Param('branchId') branchId: string) {
+    return this.publicService.getPublicMenu(branchId);
+  }
+
+  @Get('orders/:publicToken')
+  async getPublicOrder(@Param('publicToken') publicToken: string) {
+    return this.publicService.getPublicOrder(publicToken);
   }
 
   @Get('queue/:publicToken')

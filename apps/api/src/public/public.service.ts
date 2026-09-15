@@ -345,4 +345,128 @@ export class PublicService {
       branch: entry.branch,
     };
   }
+
+  async getPublicOrder(publicToken: string) {
+    const order = await this.prisma.order.findUnique({
+      where: {
+        publicToken,
+      },
+      select: {
+        publicToken: true,
+        orderNumber: true,
+        orderType: true,
+        status: true,
+        paymentStatus: true,
+        currency: true,
+        subtotal: true,
+        total: true,
+        table: {
+          select: {
+            name: true,
+            location: true,
+          },
+        },
+        items: {
+          select: {
+            productName: true,
+            quantity: true,
+            unitPrice: true,
+            subtotal: true,
+          },
+        },
+        branch: {
+          select: {
+            name: true,
+            organization: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found.');
+    }
+
+    return order;
+  }
+
+  async getPublicMenu(branchId: string) {
+    const branch = await this.getPublicBranch(branchId);
+
+    const products = await this.prisma.product.findMany({
+      where: {
+        organizationId: branch.organizationId,
+        status: 'ACTIVE',
+      },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        price: true,
+        category: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+      orderBy: [
+        {
+          category: {
+            name: 'asc',
+          },
+        },
+        {
+          name: 'asc',
+        },
+      ],
+    });
+
+    const categories = new Map<
+      string,
+      {
+        id: string;
+        name: string;
+        products: typeof products;
+      }
+    >();
+
+    for (const product of products) {
+      if (!product.category) {
+        continue;
+      }
+
+      const existing = categories.get(product.category.id);
+
+      if (existing) {
+        existing.products.push(product);
+        continue;
+      }
+
+      categories.set(product.category.id, {
+        id: product.category.id,
+        name: product.category.name,
+        products: [product],
+      });
+    }
+
+    return {
+      branch: {
+        id: branch.id,
+        name: branch.name,
+        slug: branch.slug,
+      },
+      organization: {
+        id: branch.organization.id,
+        name: branch.organization.name,
+        slug: branch.organization.slug,
+        currency: branch.organization.currency,
+      },
+      categories: Array.from(categories.values()),
+    };
+  }
 }
