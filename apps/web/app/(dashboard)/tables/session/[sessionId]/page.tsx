@@ -8,7 +8,6 @@ import {
   Plus,
   ReceiptText,
   Utensils,
-  XCircle,
 } from "lucide-react";
 import Link from "next/link";
 import { useMemo } from "react";
@@ -42,13 +41,18 @@ function formatDateTime(value: string) {
 }
 
 export default function TableSessionPage() {
-  const params = useParams<{ sessionId: string }>();
+  const params = useParams<{
+    sessionId: string;
+  }>();
+
   const router = useRouter();
 
   const { activeMembership, isLoading: workspaceLoading } = useWorkspace();
 
   const organizationId = activeMembership?.organization?.id;
+
   const branchId = activeMembership?.branch?.id;
+
   const sessionId = params.sessionId;
 
   const {
@@ -70,11 +74,17 @@ export default function TableSessionPage() {
 
   const orders = session?.orders ?? [];
 
+  /*
+   * SESSION TOTAL
+   */
   const sessionTotal = useMemo(
     () => orders.reduce((sum, order) => sum + Number(order.total), 0),
     [orders],
   );
 
+  /*
+   * PAID TOTAL
+   */
   const paidTotal = useMemo(
     () =>
       orders
@@ -83,18 +93,68 @@ export default function TableSessionPage() {
     [orders],
   );
 
+  /*
+   * OUTSTANDING
+   */
   const outstandingTotal = Math.max(sessionTotal - paidTotal, 0);
 
-  const unpaidOrders = orders.filter(
-    (order) => order.paymentStatus === "UNPAID" && order.status !== "CANCELLED",
+  /*
+   * ACTIVE ORDERS
+   *
+   * An order is still operationally active
+   * unless it is COMPLETED or CANCELLED.
+   */
+  const activeOrders = useMemo(
+    () =>
+      orders.filter(
+        (order) => order.status !== "COMPLETED" && order.status !== "CANCELLED",
+      ),
+    [orders],
   );
 
+  /*
+   * UNPAID ORDERS
+   *
+   * Cancelled orders don't require payment.
+   */
+  const unpaidOrders = useMemo(
+    () =>
+      orders.filter(
+        (order) =>
+          order.status !== "CANCELLED" && order.paymentStatus !== "PAID",
+      ),
+    [orders],
+  );
+
+  const hasActiveOrders = activeOrders.length > 0;
+
+  const hasUnpaidOrders = unpaidOrders.length > 0;
+
+  /*
+   * CLOSE RULE
+   *
+   * Table can only close when:
+   * - Session is OPEN
+   * - No active orders remain
+   * - No unpaid orders remain
+   */
   const canClose =
     session?.status === "OPEN" &&
-    unpaidOrders.length === 0 &&
-    outstandingTotal <= 0 &&
+    !hasActiveOrders &&
+    !hasUnpaidOrders &&
     !closeSession.isPending;
 
+  let closeBlockReason = "";
+
+  if (hasActiveOrders) {
+    closeBlockReason = "Complete all active orders before closing the table.";
+  } else if (hasUnpaidOrders) {
+    closeBlockReason = "Pay all outstanding orders before closing the table.";
+  }
+
+  /*
+   * CLOSE TABLE
+   */
   async function handleCloseTable() {
     if (!session || !canClose) {
       return;
@@ -110,12 +170,16 @@ export default function TableSessionPage() {
 
     try {
       await closeSession.mutateAsync(session.id);
-      router.push("/orders");
+
+      router.push("/tables");
     } catch {
       // React Query exposes the error through closeSession.error.
     }
   }
 
+  /*
+   * LOADING
+   */
   if (workspaceLoading || sessionLoading) {
     return (
       <div className="pt-6">
@@ -124,15 +188,18 @@ export default function TableSessionPage() {
     );
   }
 
+  /*
+   * ERROR
+   */
   if (!activeMembership?.branch || !session || isError) {
     return (
       <div className="space-y-5 pt-4">
         <Link
-          href="/orders"
+          href="/tables"
           className="inline-flex items-center gap-2 text-sm font-medium text-[#6F4E37]"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to orders
+          Back to tables
         </Link>
 
         <div className="rounded-[28px] border border-[#E7DCCE] bg-[#FFFDF9] p-8 text-center">
@@ -158,11 +225,11 @@ export default function TableSessionPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <Link
-            href="/orders"
+            href="/tables"
             className="inline-flex items-center gap-2 text-sm font-medium text-[#7C6F64] transition-colors hover:text-[#6F4E37]"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to orders
+            Back to tables
           </Link>
 
           <div className="mt-4 flex items-center gap-3">
@@ -171,7 +238,7 @@ export default function TableSessionPage() {
             </div>
 
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <h1 className="text-3xl font-semibold tracking-tight text-[#2B2118]">
                   {session.table.name}
                 </h1>
@@ -209,7 +276,7 @@ export default function TableSessionPage() {
       {/* SESSION SUMMARY */}
       <section className="grid gap-4 sm:grid-cols-3">
         <div className="rounded-[24px] border border-[#E7DCCE] bg-[#FFFDF9] p-5">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-xs font-medium uppercase tracking-[0.12em] text-[#9A8C80]">
                 Orders
@@ -227,7 +294,7 @@ export default function TableSessionPage() {
         </div>
 
         <div className="rounded-[24px] border border-[#E7DCCE] bg-[#FFFDF9] p-5">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-xs font-medium uppercase tracking-[0.12em] text-[#9A8C80]">
                 Paid
@@ -245,7 +312,7 @@ export default function TableSessionPage() {
         </div>
 
         <div className="rounded-[24px] border border-[#E7DCCE] bg-[#FFFDF9] p-5">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-xs font-medium uppercase tracking-[0.12em] text-[#9A8C80]">
                 Outstanding
@@ -263,8 +330,9 @@ export default function TableSessionPage() {
         </div>
       </section>
 
-      {/* ORDERS + SIDEBAR */}
+      {/* ORDERS + SUMMARY */}
       <section className="grid gap-5 xl:grid-cols-[1fr_360px]">
+        {/* ORDERS */}
         <div className="space-y-4">
           {orders.length === 0 ? (
             <div className="rounded-[28px] border border-[#E7DCCE] bg-[#FFFDF9] p-10 text-center">
@@ -277,6 +345,14 @@ export default function TableSessionPage() {
               <p className="mt-1 text-sm text-[#94877A]">
                 Add the first order for this table.
               </p>
+
+              <Link
+                href={`/orders/new?tableId=${session.table.id}`}
+                className="mt-5 inline-flex h-10 items-center gap-2 rounded-xl bg-[#6F4E37] px-4 text-sm font-semibold text-white hover:bg-[#5E402E]"
+              >
+                <Plus className="h-4 w-4" />
+                Add order
+              </Link>
             </div>
           ) : (
             orders.map((order) => {
@@ -284,11 +360,14 @@ export default function TableSessionPage() {
 
               const isCancelled = order.status === "CANCELLED";
 
+              const isCompleted = order.status === "COMPLETED";
+
               return (
                 <div
                   key={order.id}
                   className="rounded-[28px] border border-[#E7DCCE] bg-[#FFFDF9] p-5 sm:p-6"
                 >
+                  {/* ORDER HEADER */}
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
@@ -333,6 +412,7 @@ export default function TableSessionPage() {
                     </p>
                   </div>
 
+                  {/* ORDER ITEMS */}
                   <div className="mt-5 divide-y divide-[#EEE6DD] rounded-2xl border border-[#EEE6DD]">
                     {order.items.map((item) => (
                       <div
@@ -363,6 +443,7 @@ export default function TableSessionPage() {
                     ))}
                   </div>
 
+                  {/* PAYMENT ACTION */}
                   {!isPaid && !isCancelled && (
                     <div className="mt-4 flex justify-end">
                       <Link
@@ -372,6 +453,24 @@ export default function TableSessionPage() {
                         <CreditCard className="h-3.5 w-3.5" />
                         Record payment
                       </Link>
+                    </div>
+                  )}
+
+                  {/* COMPLETION NOTICE */}
+                  {isCompleted && !isCancelled && isPaid && (
+                    <div className="mt-4 flex items-center gap-2 rounded-xl bg-[#ECF3EC] px-3 py-2.5 text-xs font-medium text-[#607560]">
+                      <CheckCircle2 className="h-4 w-4" />
+                      Order completed and paid.
+                    </div>
+                  )}
+
+                  {activeOrders.some(
+                    (activeOrder) => activeOrder.id === order.id,
+                  ) && (
+                    <div className="mt-4 flex items-center gap-2 rounded-xl bg-[#F4ECE4] px-3 py-2.5 text-xs font-medium text-[#765F4E]">
+                      <Clock3 className="h-4 w-4" />
+                      This order must be completed before the table can be
+                      closed.
                     </div>
                   )}
                 </div>
@@ -415,10 +514,42 @@ export default function TableSessionPage() {
               </div>
             </div>
 
-            {unpaidOrders.length > 0 ? (
+            {/* CLOSE STATUS */}
+            {session.status === "CLOSED" ? (
+              <div className="mt-5 rounded-2xl border border-[#8BA08B]/20 bg-white/5 p-4">
+                <div className="flex gap-3">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#B9D0B9]" />
+
+                  <div>
+                    <p className="text-sm font-semibold">Table closed</p>
+
+                    <p className="mt-1 text-xs leading-5 text-[#CDB9A5]">
+                      This table is ready to become available for the next
+                      customer.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : hasActiveOrders ? (
               <div className="mt-5 rounded-2xl border border-[#B36F5D]/20 bg-[#8B4A3C]/15 p-4">
                 <div className="flex gap-3">
                   <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-[#E5B8A9]" />
+
+                  <div>
+                    <p className="text-sm font-semibold text-[#F6DDD5]">
+                      Active orders remain
+                    </p>
+
+                    <p className="mt-1 text-xs leading-5 text-[#D6B9AF]">
+                      Complete all active orders before closing this table.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : hasUnpaidOrders ? (
+              <div className="mt-5 rounded-2xl border border-[#B36F5D]/20 bg-[#8B4A3C]/15 p-4">
+                <div className="flex gap-3">
+                  <CreditCard className="mt-0.5 h-4 w-4 shrink-0 text-[#E5B8A9]" />
 
                   <div>
                     <p className="text-sm font-semibold text-[#F6DDD5]">
@@ -426,9 +557,7 @@ export default function TableSessionPage() {
                     </p>
 
                     <p className="mt-1 text-xs leading-5 text-[#D6B9AF]">
-                      {unpaidOrders.length} order
-                      {unpaidOrders.length !== 1 ? "s" : ""} still need payment
-                      before the table can be closed.
+                      Pay all outstanding orders before closing this table.
                     </p>
                   </div>
                 </div>
@@ -442,13 +571,14 @@ export default function TableSessionPage() {
                     <p className="text-sm font-semibold">Ready to close</p>
 
                     <p className="mt-1 text-xs leading-5 text-[#CDB9A5]">
-                      All active orders are paid.
+                      All active orders are completed and paid.
                     </p>
                   </div>
                 </div>
               </div>
             )}
 
+            {/* ACTIONS */}
             <div className="mt-5 space-y-2">
               <Link
                 href={`/orders/new?tableId=${session.table.id}`}
@@ -488,15 +618,21 @@ export default function TableSessionPage() {
                     <CheckCircle2 className="h-4 w-4" />
                     Close table
                   </>
+                ) : hasActiveOrders ? (
+                  <>
+                    <Clock3 className="h-4 w-4" />
+                    Complete orders first
+                  </>
                 ) : (
                   <>
-                    <XCircle className="h-4 w-4" />
+                    <CreditCard className="h-4 w-4" />
                     Pay outstanding first
                   </>
                 )}
               </button>
             </div>
 
+            {/* BACKEND ERROR */}
             {closeSession.isError && (
               <div className="mt-4 rounded-xl bg-[#8B4A3C] px-3 py-2.5 text-xs text-[#FFE8E1]">
                 {closeSession.error instanceof Error

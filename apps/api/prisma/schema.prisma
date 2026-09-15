@@ -243,6 +243,7 @@ model Product {
   name        String
   description String?
   sku         String?
+  imageUrl    String?
   price       Decimal  @db.Decimal(12, 2)
   cost        Decimal? @db.Decimal(12, 2)
 

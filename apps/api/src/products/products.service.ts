@@ -13,10 +13,7 @@ import { UpdateProductDto } from './dto/update-product.dto';
 export class ProductsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(
-    organizationId: string,
-    dto: CreateProductDto,
-  ) {
+  async create(organizationId: string, dto: CreateProductDto) {
     if (dto.sku) {
       const existingSku = await this.prisma.product.findFirst({
         where: {
@@ -29,28 +26,23 @@ export class ProductsService {
       });
 
       if (existingSku) {
-        throw new ConflictException(
-          'A product with this SKU already exists.',
-        );
+        throw new ConflictException('A product with this SKU already exists.');
       }
     }
 
     if (dto.categoryId) {
-      const category =
-        await this.prisma.productCategory.findFirst({
-          where: {
-            id: dto.categoryId,
-            organizationId,
-          },
-          select: {
-            id: true,
-          },
-        });
+      const category = await this.prisma.productCategory.findFirst({
+        where: {
+          id: dto.categoryId,
+          organizationId,
+        },
+        select: {
+          id: true,
+        },
+      });
 
       if (!category) {
-        throw new NotFoundException(
-          'Product category not found.',
-        );
+        throw new NotFoundException('Product category not found.');
       }
     }
 
@@ -60,6 +52,7 @@ export class ProductsService {
         name: dto.name,
         description: dto.description,
         sku: dto.sku,
+        imageUrl: dto.imageUrl,
         price: dto.price,
         cost: dto.cost,
         categoryId: dto.categoryId,
@@ -89,10 +82,7 @@ export class ProductsService {
     });
   }
 
-  async findOne(
-    organizationId: string,
-    productId: string,
-  ) {
+  async findOne(organizationId: string, productId: string) {
     const product = await this.prisma.product.findFirst({
       where: {
         id: productId,
@@ -118,43 +108,37 @@ export class ProductsService {
     await this.findOne(organizationId, productId);
 
     if (dto.sku) {
-      const existingSku =
-        await this.prisma.product.findFirst({
-          where: {
-            organizationId,
-            sku: dto.sku,
-            NOT: {
-              id: productId,
-            },
+      const existingSku = await this.prisma.product.findFirst({
+        where: {
+          organizationId,
+          sku: dto.sku,
+          NOT: {
+            id: productId,
           },
-          select: {
-            id: true,
-          },
-        });
+        },
+        select: {
+          id: true,
+        },
+      });
 
       if (existingSku) {
-        throw new ConflictException(
-          'A product with this SKU already exists.',
-        );
+        throw new ConflictException('A product with this SKU already exists.');
       }
     }
 
     if (dto.categoryId) {
-      const category =
-        await this.prisma.productCategory.findFirst({
-          where: {
-            id: dto.categoryId,
-            organizationId,
-          },
-          select: {
-            id: true,
-          },
-        });
+      const category = await this.prisma.productCategory.findFirst({
+        where: {
+          id: dto.categoryId,
+          organizationId,
+        },
+        select: {
+          id: true,
+        },
+      });
 
       if (!category) {
-        throw new NotFoundException(
-          'Product category not found.',
-        );
+        throw new NotFoundException('Product category not found.');
       }
     }
 
@@ -172,6 +156,9 @@ export class ProductsService {
         ...(dto.sku !== undefined && {
           sku: dto.sku,
         }),
+        ...(dto.imageUrl !== undefined && {
+          imageUrl: dto.imageUrl,
+        }),
         ...(dto.price !== undefined && {
           price: dto.price,
         }),
@@ -188,10 +175,7 @@ export class ProductsService {
     });
   }
 
-  async archive(
-    organizationId: string,
-    productId: string,
-  ) {
+  async archive(organizationId: string, productId: string) {
     await this.findOne(organizationId, productId);
 
     return this.prisma.product.update({

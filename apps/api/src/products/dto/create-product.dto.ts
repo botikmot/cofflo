@@ -1,11 +1,5 @@
 import { Type } from 'class-transformer';
-import {
-  IsNumber,
-  IsOptional,
-  IsString,
-  IsUUID,
-  Min,
-} from 'class-validator';
+import { IsNumber, IsOptional, IsString, IsUUID, Min } from 'class-validator';
 
 export class CreateProductDto {
   @IsString()
@@ -18,6 +12,10 @@ export class CreateProductDto {
   @IsOptional()
   @IsString()
   sku?: string;
+
+  @IsOptional()
+  @IsString()
+  imageUrl?: string;
 
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 2 })

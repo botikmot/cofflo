@@ -189,12 +189,29 @@ export class TableSessionsService {
           });
         }
 
+        const activeOrders = await tx.order.count({
+          where: {
+            tableSessionId: session.id,
+            status: {
+              notIn: ['COMPLETED', 'CANCELLED'],
+            },
+          },
+        });
+
+        if (activeOrders > 0) {
+          throw new ConflictException(
+            'This table still has active orders. Complete all orders before closing the table.',
+          );
+        }
+
         const unpaidOrders = await tx.order.count({
           where: {
             tableSessionId: session.id,
-            paymentStatus: 'UNPAID',
             status: {
               not: 'CANCELLED',
+            },
+            paymentStatus: {
+              not: 'PAID',
             },
           },
         });
