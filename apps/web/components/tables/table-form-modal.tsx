@@ -6,8 +6,10 @@ import { X } from "lucide-react";
 import type { DashboardTable } from "@/types/dashboard";
 
 import type { CreateTablePayload } from "@/services/tables.service";
+import { uploadService } from "@/services/upload.service";
 
 type Props = {
+  organizationId: string;
   open: boolean;
   table?: DashboardTable | null;
   loading?: boolean;
@@ -16,6 +18,7 @@ type Props = {
 };
 
 export function TableFormModal({
+  organizationId,
   open,
   table,
   loading = false,
@@ -35,6 +38,8 @@ export function TableFormModal({
   const [customerSelectable, setCustomerSelectable] = useState(
     table?.customerSelectable ?? true,
   );
+
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   if (!open) {
     return null;
@@ -63,6 +68,40 @@ export function TableFormModal({
       customerSelectable,
     });
   }
+
+  const handleImageUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      alert("Please select an image file.");
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Image must be smaller than 5MB.");
+      event.target.value = "";
+      return;
+    }
+
+    try {
+      setIsUploadingImage(true);
+
+      const result = await uploadService.uploadTableImage(organizationId, file);
+
+      setPhotoUrl(result.url);
+    } catch (error) {
+      console.error("Table image upload failed:", error);
+      alert("Failed to upload table image.");
+    } finally {
+      setIsUploadingImage(false);
+      event.target.value = "";
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#2B2118]/35 p-4 backdrop-blur-sm">
@@ -128,17 +167,57 @@ export function TableFormModal({
             />
           </div>
 
-          <div>
-            <label className="text-xs font-semibold text-[#5C5047]">
-              Photo URL
-            </label>
+          <div className="space-y-2.5">
+            <div>
+              <label className="text-xs font-semibold text-[#5C5047]">
+                Table image
+              </label>
 
-            <input
-              value={photoUrl}
-              onChange={(event) => setPhotoUrl(event.target.value)}
-              placeholder="https://..."
-              className="mt-2 h-11 w-full rounded-xl border border-[#E0D4C8] bg-[#FAF6F1] px-3 text-sm text-[#2B2118] outline-none focus:border-[#B99A80]"
-            />
+              <p className="mt-0.5 text-[11px] text-[#8B7E74]">
+                JPG, PNG, or WEBP · Maximum 5MB
+              </p>
+            </div>
+
+            {photoUrl ? (
+              <div className="relative overflow-hidden rounded-2xl border border-[#E8DED3] bg-[#F7F3ED]">
+                <img
+                  src={photoUrl}
+                  alt={name || "Table preview"}
+                  className="h-36 w-full object-cover sm:h-40"
+                />
+
+                <button
+                  type="button"
+                  onClick={() => setPhotoUrl("")}
+                  disabled={isUploadingImage}
+                  className="absolute right-3 top-3 rounded-full bg-white/90 px-3 py-1.5 text-xs font-medium text-[#7A2E2E] shadow-sm transition hover:bg-white disabled:opacity-50"
+                >
+                  Remove
+                </button>
+              </div>
+            ) : (
+              <label className="flex h-36 cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-[#D8C9BB] bg-[#FCF9F5] transition hover:border-[#6F4E37] hover:bg-[#F7F3ED] sm:h-40">
+                <div className="mb-2 text-2xl">🪑</div>
+
+                <span className="text-sm font-medium text-[#6F4E37]">
+                  {isUploadingImage ? "Uploading..." : "Upload table image"}
+                </span>
+
+                {!isUploadingImage && (
+                  <span className="mt-1 text-[11px] text-[#9A8B7D]">
+                    Choose an image from your computer
+                  </span>
+                )}
+
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={handleImageUpload}
+                  disabled={isUploadingImage}
+                />
+              </label>
+            )}
           </div>
 
           <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-[#E7DCCE] bg-[#FAF6F1] px-3 py-3">
@@ -171,10 +250,16 @@ export function TableFormModal({
 
             <button
               type="submit"
-              disabled={loading || !name.trim()}
+              disabled={loading || isUploadingImage || !name.trim()}
               className="h-10 rounded-xl bg-[#6F4E37] px-4 text-sm font-semibold text-white hover:bg-[#5E402E] disabled:opacity-50"
             >
-              {loading ? "Saving..." : isEditing ? "Save changes" : "Add table"}
+              {isUploadingImage
+                ? "Uploading image..."
+                : loading
+                  ? "Saving..."
+                  : isEditing
+                    ? "Save changes"
+                    : "Add table"}
             </button>
           </div>
         </form>

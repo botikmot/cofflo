@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { create } from 'zustand';
+import { create } from "zustand";
 
-import { apiFetch } from '@/lib/api';
+import { apiFetch } from "@/lib/api";
 import type {
   AuthUser,
   //LoginResponse,
-} from '@/types/auth';
+} from "@/types/auth";
 
 type AuthState = {
   user: AuthUser | null;
@@ -14,10 +14,7 @@ type AuthState = {
   hydrated: boolean;
   loading: boolean;
 
-  setAuth: (
-    accessToken: string,
-    user?: AuthUser | null,
-  ) => void;
+  setAuth: (accessToken: string, user?: AuthUser | null) => void;
 
   loadMe: () => Promise<AuthUser | null>;
   logout: () => void;
@@ -31,7 +28,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   loading: false,
 
   setAuth: (accessToken, user = null) => {
-    localStorage.setItem('accessToken', accessToken);
+    localStorage.setItem("accessToken", accessToken);
 
     set({
       accessToken,
@@ -43,7 +40,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ loading: true });
 
     try {
-      const user = await apiFetch<AuthUser>('/auth/me');
+      const user = await apiFetch<AuthUser>("/auth/me");
 
       set({
         user,
@@ -51,8 +48,9 @@ export const useAuthStore = create<AuthState>((set) => ({
       });
 
       return user;
-    } catch {
-      localStorage.removeItem('accessToken');
+    } catch (error) {
+      console.error("AUTH loadMe FAILED:", error);
+      localStorage.removeItem("accessToken");
 
       set({
         accessToken: null,
@@ -65,7 +63,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: () => {
-    localStorage.removeItem('accessToken');
+    localStorage.removeItem("accessToken");
 
     set({
       user: null,
@@ -74,8 +72,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   hydrate: async () => {
-    const accessToken =
-      localStorage.getItem('accessToken');
+    const accessToken = localStorage.getItem("accessToken");
 
     if (!accessToken) {
       set({

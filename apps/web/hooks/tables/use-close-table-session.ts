@@ -40,6 +40,14 @@ export function useCloseTableSession({
       queryClient.invalidateQueries({
         queryKey: ["orders", organizationId, branchId],
       });
+
+      queryClient.invalidateQueries({
+        queryKey: ["queue", organizationId, branchId],
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: ["queue-summary", organizationId, branchId],
+      });
     },
   });
 }

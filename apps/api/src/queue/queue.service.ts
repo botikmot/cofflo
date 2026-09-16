@@ -10,10 +10,14 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AssignQueueTableDto } from './dto/assign-queue-table.dto';
 import { JoinQueueDto } from './dto/join-queue.dto';
 import { randomBytes } from 'crypto';
+import { TableSessionsService } from '../table-sessions/table-sessions.service';
 
 @Injectable()
 export class QueueService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly tableSessionsService: TableSessionsService,
+  ) {}
 
   async joinQueue(organizationId: string, branchId: string, dto: JoinQueueDto) {
     const branch = await this.prisma.branch.findFirst({
@@ -81,9 +85,21 @@ export class QueueService {
         organizationId,
         branchId,
         queueDate,
-        status: {
-          in: ['WAITING', 'CALLED', 'SEATED'],
-        },
+        OR: [
+          {
+            status: {
+              in: ['WAITING', 'CALLED'],
+            },
+          },
+          {
+            status: 'SEATED',
+            table: {
+              is: {
+                status: 'OCCUPIED',
+              },
+            },
+          },
+        ],
       },
       include: {
         table: true,
@@ -233,58 +249,88 @@ export class QueueService {
     branchId: string,
     queueEntryId: string,
   ) {
-    const entry = await this.prisma.queueEntry.findFirst({
-      where: {
-        id: queueEntryId,
-        organizationId,
-        branchId,
-      },
-      include: {
-        table: true,
-      },
-    });
-
-    if (!entry) {
-      throw new NotFoundException('Queue entry not found.');
-    }
-
-    if (entry.status !== 'CALLED') {
-      throw new BadRequestException(
-        'Only called queue entries can be marked as seated.',
-      );
-    }
-
-    return this.prisma.$transaction(async (tx) => {
-      await tx.queueEntry.update({
-        where: {
-          id: queueEntryId,
-        },
-        data: {
-          status: 'SEATED',
-          seatedAt: new Date(),
-        },
-      });
-
-      if (entry.tableId) {
-        await tx.table.update({
+    return this.prisma.$transaction(
+      async (tx) => {
+        const queueEntry = await tx.queueEntry.findFirst({
           where: {
-            id: entry.tableId,
+            id: queueEntryId,
+            organizationId,
+            branchId,
           },
-          data: {
-            status: 'OCCUPIED',
+          include: {
+            table: true,
           },
         });
-      }
 
-      return tx.queueEntry.findUnique({
-        where: {
-          id: queueEntryId,
-        },
-        include: {
-          table: true,
-        },
-      });
-    });
+        if (!queueEntry) {
+          throw new NotFoundException('Queue entry not found.');
+        }
+
+        if (queueEntry.status !== 'CALLED') {
+          throw new ConflictException(
+            'Only a called customer can be marked as seated.',
+          );
+        }
+
+        if (!queueEntry.tableId) {
+          throw new ConflictException(
+            'This queue customer has no assigned table.',
+          );
+        }
+
+        const table = await tx.table.findFirst({
+          where: {
+            id: queueEntry.tableId,
+            organizationId,
+            branchId,
+            isActive: true,
+          },
+          select: {
+            id: true,
+            status: true,
+          },
+        });
+
+        if (!table) {
+          throw new NotFoundException('Assigned table not found.');
+        }
+
+        /**
+         * Reuse the existing TableSession system.
+         *
+         * If an OPEN session already exists, reuse it.
+         * Otherwise create one and mark the table OCCUPIED.
+         */
+        const session =
+          await this.tableSessionsService.ensureOpenSessionInTransaction(
+            tx,
+            organizationId,
+            branchId,
+            queueEntry.tableId,
+          );
+
+        const updatedQueueEntry = await tx.queueEntry.update({
+          where: {
+            id: queueEntry.id,
+          },
+          data: {
+            status: 'SEATED',
+            seatedAt: new Date(),
+          },
+          include: {
+            table: true,
+          },
+        });
+
+        return {
+          ...updatedQueueEntry,
+          tableSessionId: session.id,
+        };
+      },
+      {
+        isolationLevel: 'Serializable',
+      },
+    );
   }
 
   async cancel(organizationId: string, branchId: string, queueEntryId: string) {
@@ -419,27 +465,42 @@ export class QueueService {
   async getQueueSummary(organizationId: string, branchId: string) {
     const queueDate = this.getTodayQueueDate();
 
-    const entries = await this.prisma.queueEntry.findMany({
-      where: {
-        organizationId,
-        branchId,
-        queueDate,
-      },
-      select: {
-        status: true,
-      },
-    });
+    const [waiting, called, seated] = await Promise.all([
+      this.prisma.queueEntry.count({
+        where: {
+          organizationId,
+          branchId,
+          queueDate,
+          status: 'WAITING',
+        },
+      }),
 
-    const waiting = entries.filter(
-      (entry) => entry.status === 'WAITING',
-    ).length;
+      this.prisma.queueEntry.count({
+        where: {
+          organizationId,
+          branchId,
+          queueDate,
+          status: 'CALLED',
+        },
+      }),
 
-    const called = entries.filter((entry) => entry.status === 'CALLED').length;
-
-    const seated = entries.filter((entry) => entry.status === 'SEATED').length;
+      this.prisma.queueEntry.count({
+        where: {
+          organizationId,
+          branchId,
+          queueDate,
+          status: 'SEATED',
+          table: {
+            is: {
+              status: 'OCCUPIED',
+            },
+          },
+        },
+      }),
+    ]);
 
     return {
-      total: entries.length,
+      total: waiting + called + seated,
       waiting,
       called,
       seated,

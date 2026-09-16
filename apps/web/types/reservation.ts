@@ -83,3 +83,47 @@ export type CreateReservationResponse = {
     name: string;
   };
 };
+
+export type Reservation = {
+  id: string;
+  organizationId: string;
+  branchId: string;
+  tableId: string | null;
+
+  publicToken: string;
+
+  customerName: string;
+  customerPhone: string | null;
+  guestCount: number;
+
+  startAt: string;
+  endAt: string;
+
+  status: ReservationStatus;
+  notes: string | null;
+
+  createdAt: string;
+  updatedAt: string;
+
+  table: ReservationTable | null;
+};
+
+export type CreateReservationPayload = {
+  customerName: string;
+  customerPhone?: string;
+  guestCount: number;
+  startAt: string;
+  endAt: string;
+  tableId?: string;
+  notes?: string;
+};
+
+export type UpdateReservationPayload = {
+  customerName?: string;
+  customerPhone?: string;
+  guestCount?: number;
+  startAt?: string;
+  endAt?: string;
+  tableId?: string;
+  notes?: string;
+};

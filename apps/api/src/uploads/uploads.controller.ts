@@ -38,4 +38,19 @@ export class UploadsController {
   ) {
     return this.uploadsService.uploadProductImage(file, organizationId);
   }
+
+  @Post('table-image')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: {
+        fileSize: 5 * 1024 * 1024,
+      },
+    }),
+  )
+  async uploadTableImage(
+    @Param('organizationId') organizationId: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return this.uploadsService.uploadTableImage(file, organizationId);
+  }
 }

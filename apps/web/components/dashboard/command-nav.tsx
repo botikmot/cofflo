@@ -39,7 +39,7 @@ const navigation = [
   },
   {
     label: "Bookings",
-    href: "/reservations",
+    href: "/bookings",
     icon: CalendarDays,
   },
   {
@@ -51,14 +51,14 @@ const navigation = [
 
 const moreItems = [
   {
-    label: "Inventory",
-    href: "/inventory",
-    icon: Package,
-  },
-  {
     label: "Queue",
     href: "/queue",
     icon: Users,
+  },
+  {
+    label: "Inventory",
+    href: "/inventory",
+    icon: Package,
   },
   {
     label: "Staff",

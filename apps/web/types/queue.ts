@@ -49,3 +49,72 @@ export type JoinQueueResponse = {
     name: string;
   };
 };
+
+/*
+|--------------------------------------------------------------------------
+| DASHBOARD / STAFF
+|--------------------------------------------------------------------------
+*/
+
+export type QueueEntry = {
+  id: string;
+  organizationId: string;
+  branchId: string;
+
+  publicToken: string;
+
+  queueDate: string;
+  queueNumber: number;
+
+  customerName: string;
+  customerPhone: string | null;
+  guestCount: number;
+
+  status: QueueStatus;
+
+  notes: string | null;
+
+  joinedAt: string;
+  calledAt: string | null;
+  seatedAt: string | null;
+
+  tableId: string | null;
+
+  table: {
+    id: string;
+    name: string;
+    capacity: number;
+    location: string | null;
+    photoUrl: string | null;
+    status: "AVAILABLE" | "OCCUPIED" | "UNAVAILABLE" | "RESERVED";
+  } | null;
+};
+
+export type QueueSummary = {
+  total: number;
+  waiting: number;
+  called: number;
+  seated: number;
+};
+
+export type AssignQueueTablePayload = {
+  tableId: string;
+};
+
+export type QueuePositionResponse = {
+  queueNumber: number;
+  status: QueueStatus;
+  position: number | null;
+};
+
+export type QueueTable = {
+  id: string;
+  name: string;
+  capacity: number;
+  status: "AVAILABLE" | "OCCUPIED" | "UNAVAILABLE" | "RESERVED";
+};
+
+export type NextQueueCustomerResponse = {
+  table: QueueTable;
+  nextCustomer: QueueEntry | null;
+};

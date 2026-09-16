@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronDown, MapPin } from "lucide-react";
 
 import type { AuthMembership } from "@/types/auth";
+import { useWorkspaceStore } from "@/stores/workspace.store";
 
 type BranchSwitcherProps = {
   memberships: AuthMembership[];
@@ -13,21 +14,119 @@ type BranchSwitcherProps = {
 
 export function BranchSwitcher({
   memberships,
-  activeMembershipId,
+  activeMembershipId: propActiveMembershipId,
   onSelect,
 }: BranchSwitcherProps) {
   const [open, setOpen] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const branchMemberships = memberships.filter(
-    (membership) => membership.branch !== null,
+  /*
+   * ------------------------------------------------------------
+   * WORKSPACE STORE
+   * ------------------------------------------------------------
+   */
+
+  const storeActiveMembershipId = useWorkspaceStore(
+    (state) => state.activeMembershipId,
   );
 
-  const activeMembership =
-    branchMemberships.find(
+  const hydrated = useWorkspaceStore((state) => state.hydrated);
+
+  const hydrateWorkspace = useWorkspaceStore((state) => state.hydrate);
+
+  const setActiveMembershipId = useWorkspaceStore(
+    (state) => state.setActiveMembershipId,
+  );
+
+  /*
+   * ------------------------------------------------------------
+   * HYDRATE WORKSPACE
+   * ------------------------------------------------------------
+   */
+
+  useEffect(() => {
+    if (!hydrated) {
+      hydrateWorkspace();
+    }
+  }, [hydrated, hydrateWorkspace]);
+
+  /*
+   * ------------------------------------------------------------
+   * BRANCH MEMBERSHIPS
+   * ------------------------------------------------------------
+   */
+
+  const branchMemberships = useMemo(
+    () => memberships.filter((membership) => membership.branch !== null),
+    [memberships],
+  );
+
+  /*
+   * ------------------------------------------------------------
+   * ACTIVE MEMBERSHIP
+   *
+   * Store is the preferred source.
+   * Prop remains as fallback for parent-driven state.
+   * ------------------------------------------------------------
+   */
+
+  const activeMembershipId = storeActiveMembershipId ?? propActiveMembershipId;
+
+  const activeMembership = useMemo(() => {
+    if (!branchMemberships.length) {
+      return null;
+    }
+
+    return (
+      branchMemberships.find(
+        (membership) => membership.id === activeMembershipId,
+      ) ?? branchMemberships[0]
+    );
+  }, [branchMemberships, activeMembershipId]);
+
+  /*
+   * ------------------------------------------------------------
+   * ENSURE ACTIVE BRANCH EXISTS
+   * ------------------------------------------------------------
+   */
+
+  useEffect(() => {
+    if (!hydrated) {
+      return;
+    }
+
+    if (!branchMemberships.length) {
+      return;
+    }
+
+    const activeStillExists = branchMemberships.some(
       (membership) => membership.id === activeMembershipId,
-    ) ?? branchMemberships[0];
+    );
+
+    /*
+     * No valid active membership:
+     * use the first available branch membership.
+     */
+    if (!activeMembershipId || !activeStillExists) {
+      const firstMembership = branchMemberships[0];
+
+      setActiveMembershipId(firstMembership.id);
+      onSelect(firstMembership.id);
+    }
+  }, [
+    hydrated,
+    branchMemberships,
+    activeMembershipId,
+    setActiveMembershipId,
+    onSelect,
+  ]);
+
+  /*
+   * ------------------------------------------------------------
+   * OUTSIDE CLICK
+   * ------------------------------------------------------------
+   */
 
   useEffect(() => {
     function handleOutsideClick(event: MouseEvent) {
@@ -46,16 +145,37 @@ export function BranchSwitcher({
     };
   }, []);
 
+  /*
+   * ------------------------------------------------------------
+   * NO BRANCH
+   * ------------------------------------------------------------
+   */
+
   if (!activeMembership?.branch) {
     return null;
   }
 
   const multipleBranches = branchMemberships.length > 1;
 
+  /*
+   * ------------------------------------------------------------
+   * SELECT BRANCH
+   * ------------------------------------------------------------
+   */
+
   function handleSelect(membershipId: string) {
     setOpen(false);
+
+    setActiveMembershipId(membershipId);
+
     onSelect(membershipId);
   }
+
+  /*
+   * ------------------------------------------------------------
+   * UI
+   * ------------------------------------------------------------
+   */
 
   return (
     <div ref={containerRef} className="relative">
@@ -158,24 +278,24 @@ export function BranchSwitcher({
                     type="button"
                     onClick={() => handleSelect(membership.id)}
                     className={`
-                      flex w-full items-center gap-3
-                      rounded-xl px-3 py-3
-                      text-left
-                      transition-all duration-150
-                      ${active ? "bg-[#F4ECE4]" : "hover:bg-[#FAF6F1]"}
-                    `}
+                        flex w-full items-center gap-3
+                        rounded-xl px-3 py-3
+                        text-left
+                        transition-all duration-150
+                        ${active ? "bg-[#F4ECE4]" : "hover:bg-[#FAF6F1]"}
+                      `}
                   >
                     <div
                       className={`
-                        flex h-9 w-9 shrink-0
-                        items-center justify-center
-                        rounded-xl
-                        ${
-                          active
-                            ? "bg-[#6F4E37] text-white"
-                            : "bg-[#F0E8DE] text-[#6F4E37]"
-                        }
-                      `}
+                          flex h-9 w-9 shrink-0
+                          items-center justify-center
+                          rounded-xl
+                          ${
+                            active
+                              ? "bg-[#6F4E37] text-white"
+                              : "bg-[#F0E8DE] text-[#6F4E37]"
+                          }
+                        `}
                     >
                       <MapPin className="h-4 w-4" />
                     </div>

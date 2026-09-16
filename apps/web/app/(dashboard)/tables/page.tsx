@@ -359,6 +359,8 @@ export default function TablesPage() {
 
               const session = table.activeSession;
 
+              const hasOrders = Boolean(session && session.orderCount > 0);
+
               return (
                 <article
                   key={table.id}
@@ -492,7 +494,7 @@ export default function TablesPage() {
 
                   {/* SESSION */}
                   {isOccupied && session && (
-                    <div className="mt-4 rounded-2xl border border-[#E8DED4] bg-[#FAF6F1] p-4">
+                    <div className="mt-4 rounded-2xl border border-[#E8DED4] bg-[#FAF6F1] p-4 mb-4">
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-[#8C7E73]">Orders</span>
 
@@ -518,17 +520,21 @@ export default function TablesPage() {
 
                         <span
                           className={`
-                                text-sm font-semibold
-                                ${
-                                  session.outstandingTotal > 0
-                                    ? "text-[#9B604F]"
-                                    : "text-[#657765]"
-                                }
-                              `}
+                            text-sm font-semibold
+                            ${
+                              !hasOrders
+                                ? "text-[#8C7E73]"
+                                : session.outstandingTotal > 0
+                                  ? "text-[#9B604F]"
+                                  : "text-[#657765]"
+                            }
+                          `}
                         >
-                          {session.outstandingTotal > 0
-                            ? formatCurrency(session.outstandingTotal)
-                            : "Paid in full"}
+                          {!hasOrders
+                            ? "No orders yet"
+                            : session.outstandingTotal > 0
+                              ? formatCurrency(session.outstandingTotal)
+                              : "Paid in full"}
                         </span>
                       </div>
 
@@ -540,6 +546,28 @@ export default function TablesPage() {
                       </div>
                     </div>
                   )}
+
+                  <div className="overflow-hidden rounded-2xl border border-[#E7DCCE] bg-[#FFFDF9] shadow-sm">
+                    {/* Table Image */}
+                    <div className="relative h-40 w-full overflow-hidden bg-[#F7F3ED]">
+                      {table.photoUrl ? (
+                        <img
+                          src={table.photoUrl}
+                          alt={table.name}
+                          className="h-full w-full object-cover transition duration-300 hover:scale-105"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center">
+                          <div className="text-4xl opacity-40">🪑</div>
+                        </div>
+                      )}
+
+                      {/* Status badge */}
+                      <div className="absolute right-3 top-3">
+                        {/* existing status badge */}
+                      </div>
+                    </div>
+                  </div>
 
                   {/* ACTION */}
                   <div className="mt-5">
@@ -589,17 +617,20 @@ export default function TablesPage() {
       </div>
 
       {/* CREATE / EDIT MODAL */}
-      <TableFormModal
-        key={editingTable?.id ?? (isCreateOpen ? "create" : "closed")}
-        open={isCreateOpen || Boolean(editingTable)}
-        table={editingTable}
-        loading={createTable.isPending || updateTable.isPending}
-        onClose={() => {
-          setIsCreateOpen(false);
-          setEditingTable(null);
-        }}
-        onSubmit={handleTableSubmit}
-      />
+      {organizationId && (
+        <TableFormModal
+          key={editingTable?.id ?? (isCreateOpen ? "create" : "closed")}
+          organizationId={organizationId}
+          open={isCreateOpen || Boolean(editingTable)}
+          table={editingTable}
+          loading={createTable.isPending || updateTable.isPending}
+          onClose={() => {
+            setIsCreateOpen(false);
+            setEditingTable(null);
+          }}
+          onSubmit={handleTableSubmit}
+        />
+      )}
 
       {/* ARCHIVE CONFIRMATION */}
       {archivingTable && (

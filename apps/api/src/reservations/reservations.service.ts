@@ -14,10 +14,14 @@ import {
   UpdateReservationStatusDto,
 } from './dto/update-reservation-status.dto';
 import { randomBytes } from 'crypto';
+import { TableSessionsService } from '../table-sessions/table-sessions.service';
 
 @Injectable()
 export class ReservationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly tableSessionsService: TableSessionsService,
+  ) {}
 
   async create(
     organizationId: string,
@@ -258,22 +262,87 @@ export class ReservationsService {
 
     this.validateStatusTransition(reservation.status, dto.status);
 
-    return this.prisma.reservation.update({
-      where: {
-        id: reservationId,
-      },
-      data: {
-        status: dto.status,
+    // All non-SEATED transitions keep the existing simple flow.
+    if (dto.status !== 'SEATED') {
+      return this.prisma.reservation.update({
+        where: {
+          id: reservationId,
+        },
+        data: {
+          status: dto.status,
+        },
+        include: {
+          table: true,
+        },
+      });
+    }
 
-        ...(dto.status === 'SEATED' && {
-          tableId: reservation.tableId,
-        }),
-      },
+    // A reservation must have a table before it can be seated.
+    if (!reservation.tableId) {
+      throw new ConflictException('This reservation has no assigned table.');
+    }
 
-      include: {
-        table: true,
+    return this.prisma.$transaction(
+      async (tx) => {
+        const table = await tx.table.findFirst({
+          where: {
+            id: reservation.tableId!,
+            organizationId,
+            branchId,
+            isActive: true,
+          },
+          select: {
+            id: true,
+            status: true,
+          },
+        });
+
+        if (!table) {
+          throw new NotFoundException('Assigned table not found.');
+        }
+
+        if (table.status === 'UNAVAILABLE') {
+          throw new ConflictException('The assigned table is unavailable.');
+        }
+
+        // A reservation being seated should not take over
+        // an already occupied table/session.
+        if (table.status === 'OCCUPIED') {
+          throw new ConflictException(
+            'The assigned table is currently occupied.',
+          );
+        }
+
+        const session =
+          await this.tableSessionsService.ensureOpenSessionInTransaction(
+            tx,
+            organizationId,
+            branchId,
+            table.id,
+          );
+
+        const updatedReservation = await tx.reservation.update({
+          where: {
+            id: reservationId,
+          },
+          data: {
+            status: 'SEATED',
+            tableId: table.id,
+          },
+          include: {
+            table: true,
+          },
+        });
+
+        return {
+          ...updatedReservation,
+          tableSessionId: session.id,
+        };
       },
-    });
+      {
+        isolationLevel: 'Serializable',
+      },
+    );
   }
 
   private validateDateRange(startAt: Date, endAt: Date) {
@@ -379,16 +448,6 @@ export class ReservationsService {
     current: string,
     next: ReservationStatusDto,
   ) {
-    if (
-      current === 'COMPLETED' ||
-      current === 'CANCELLED' ||
-      current === 'NO_SHOW'
-    ) {
-      throw new BadRequestException(
-        'This reservation can no longer change status.',
-      );
-    }
-
     if (current === next) {
       return;
     }
@@ -399,6 +458,12 @@ export class ReservationsService {
       CONFIRMED: ['SEATED', 'CANCELLED', 'NO_SHOW'],
 
       SEATED: ['COMPLETED'],
+
+      CANCELLED: ['PENDING'],
+
+      NO_SHOW: ['PENDING'],
+
+      COMPLETED: [],
     };
 
     const nextStatuses = allowed[current] ?? [];

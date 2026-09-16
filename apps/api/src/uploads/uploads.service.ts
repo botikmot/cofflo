@@ -1,7 +1,11 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 
 import { ConfigService } from '@nestjs/config';
-import { v2 as cloudinary } from 'cloudinary';
+import {
+  v2 as cloudinary,
+  type UploadApiErrorResponse,
+  type UploadApiResponse,
+} from 'cloudinary';
 import { Readable } from 'node:stream';
 
 type StorageDriver = 'cloudinary' | 'local';
@@ -111,5 +115,49 @@ export class UploadsService {
       url: result.secure_url,
       publicId: result.public_id,
     };
+  }
+
+  async uploadTableImage(file: Express.Multer.File, organizationId: string) {
+    this.validateImage(file);
+
+    if (this.storageDriver !== 'cloudinary') {
+      throw new BadRequestException(
+        'Table image upload requires Cloudinary storage.',
+      );
+    }
+
+    return new Promise<{ url: string; publicId: string }>((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder: `cofflo/tables/${organizationId}`,
+          resource_type: 'image',
+          transformation: [
+            {
+              width: 1200,
+              height: 1200,
+              crop: 'limit',
+            },
+          ],
+          quality: 'auto',
+          fetch_format: 'auto',
+        },
+        (
+          error: UploadApiErrorResponse | undefined,
+          uploadResult: UploadApiResponse | undefined,
+        ) => {
+          if (error || !uploadResult) {
+            reject(error ?? new Error('Table image upload failed.'));
+            return;
+          }
+
+          resolve({
+            url: uploadResult.secure_url,
+            publicId: uploadResult.public_id,
+          });
+        },
+      );
+
+      uploadStream.end(file.buffer);
+    });
   }
 }

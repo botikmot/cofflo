@@ -33,8 +33,6 @@ export default function DashboardPage() {
     branchId: branchId ?? undefined,
   });
 
-  console.log("activeMembership?::", activeMembership);
-
   if (workspaceLoading || dashboardLoading) {
     return (
       <div className="pt-6">
