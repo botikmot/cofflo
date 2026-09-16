@@ -20,17 +20,10 @@ import { UpdateInventoryItemDto } from './dto/update-inventory-item.dto';
 import { CreateInventoryMovementDto } from './dto/create-inventory-movement.dto';
 import { InventoryService } from './inventory.service';
 
-@Controller(
-  'organizations/:organizationId/branches/:branchId/inventory',
-)
-@UseGuards(
-  JwtAuthGuard,
-  OrganizationAccessGuard,
-)
+@Controller('organizations/:organizationId/branches/:branchId/inventory')
+@UseGuards(JwtAuthGuard, OrganizationAccessGuard)
 export class InventoryController {
-  constructor(
-    private readonly inventoryService: InventoryService,
-  ) {}
+  constructor(private readonly inventoryService: InventoryService) {}
 
   @Post()
   createItem(
@@ -52,10 +45,7 @@ export class InventoryController {
     @Param('organizationId') organizationId: string,
     @Param('branchId') branchId: string,
   ) {
-    return this.inventoryService.findAll(
-      organizationId,
-      branchId,
-    );
+    return this.inventoryService.findAll(organizationId, branchId);
   }
 
   @Get('low-stock')
@@ -63,10 +53,7 @@ export class InventoryController {
     @Param('organizationId') organizationId: string,
     @Param('branchId') branchId: string,
   ) {
-    return this.inventoryService.findLowStock(
-        organizationId,
-        branchId,
-    );
+    return this.inventoryService.findLowStock(organizationId, branchId);
   }
 
   @Get(':inventoryItemId')
@@ -104,6 +91,19 @@ export class InventoryController {
     @Param('inventoryItemId') inventoryItemId: string,
   ) {
     return this.inventoryService.archiveItem(
+      organizationId,
+      branchId,
+      inventoryItemId,
+    );
+  }
+
+  @Post(':inventoryItemId/restore')
+  restoreItem(
+    @Param('organizationId') organizationId: string,
+    @Param('branchId') branchId: string,
+    @Param('inventoryItemId') inventoryItemId: string,
+  ) {
+    return this.inventoryService.restoreItem(
       organizationId,
       branchId,
       inventoryItemId,
