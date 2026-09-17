@@ -11,6 +11,7 @@ import {
   Plus,
   RefreshCw,
   Users,
+  QrCode,
   XCircle,
 } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -25,6 +26,7 @@ import { useTables } from "@/hooks/tables/use-tables";
 import { useCreateTable } from "@/hooks/tables/use-create-table";
 import { useUpdateTable } from "@/hooks/tables/use-update-table";
 import { useArchiveTable } from "@/hooks/tables/use-archive-table";
+import { TableQrDialog } from "@/components/tables/table-qr-dialog";
 
 import { tableSessionService } from "@/services/table-session.service";
 
@@ -76,6 +78,8 @@ export default function TablesPage() {
   const [archivingTable, setArchivingTable] = useState<DashboardTable | null>(
     null,
   );
+
+  const [qrTable, setQrTable] = useState<DashboardTable | null>(null);
 
   const [openingTableId, setOpeningTableId] = useState<string | null>(null);
 
@@ -423,6 +427,15 @@ export default function TablesPage() {
                             Edit table
                           </button>
 
+                          <button
+                            type="button"
+                            onClick={() => setQrTable(table)}
+                            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-[#4F4339] hover:bg-[#F5EFE9]"
+                          >
+                            <QrCode className="h-4 w-4" />
+                            View QR
+                          </button>
+
                           {isAvailable && (
                             <button
                               type="button"
@@ -677,6 +690,23 @@ export default function TablesPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {branchId && (
+        <TableQrDialog
+          open={Boolean(qrTable)}
+          table={
+            qrTable
+              ? {
+                  name: qrTable.name,
+                  location: qrTable.location,
+                  qrToken: qrTable.qrToken,
+                }
+              : null
+          }
+          branchId={branchId}
+          onClose={() => setQrTable(null)}
+        />
       )}
     </>
   );

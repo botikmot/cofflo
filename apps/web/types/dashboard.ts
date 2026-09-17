@@ -20,6 +20,7 @@ export type DashboardTable = {
   capacity: number;
   location: string | null;
   photoUrl: string | null;
+  qrToken: string;
   customerSelectable: boolean;
   status: "AVAILABLE" | "OCCUPIED" | "UNAVAILABLE";
   isActive: boolean;

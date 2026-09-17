@@ -112,6 +112,7 @@ export class TablesService {
         capacity: table.capacity,
         location: table.location,
         photoUrl: table.photoUrl,
+        qrToken: table.qrToken,
         customerSelectable: table.customerSelectable,
         status: table.status,
         isActive: table.isActive,
