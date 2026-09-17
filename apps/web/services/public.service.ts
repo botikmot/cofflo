@@ -3,6 +3,7 @@ import { apiFetch } from "@/lib/api";
 import type {
   PublicBranchResponse,
   PublicTableQrResponse,
+  PublicTablesResponse,
 } from "@/types/public";
 
 export const publicService = {
@@ -12,5 +13,11 @@ export const publicService = {
 
   getTableByQrToken(qrToken: string) {
     return apiFetch<PublicTableQrResponse>(`/public/tables/${qrToken}`);
+  },
+
+  getAvailableTables(branchId: string) {
+    return apiFetch<PublicTablesResponse>(
+      `/public/branches/${branchId}/tables`,
+    );
   },
 };

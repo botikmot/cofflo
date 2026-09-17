@@ -3,6 +3,7 @@ export type PublicMenuProduct = {
   name: string;
   description: string | null;
   price: string;
+  imageUrl: string | null;
   category: {
     id: string;
     name: string;
@@ -24,6 +25,7 @@ export type PublicMenuResponse = {
   organization: {
     id: string;
     name: string;
+    description: string;
     slug: string;
     currency: string;
   };

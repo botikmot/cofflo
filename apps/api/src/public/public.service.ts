@@ -85,6 +85,7 @@ export class PublicService {
           select: {
             id: true,
             name: true,
+            description: true,
             slug: true,
             currency: true,
           },
@@ -199,6 +200,7 @@ export class PublicService {
       select: {
         publicToken: true,
         customerName: true,
+        customerPhone: true,
         guestCount: true,
         startAt: true,
         endAt: true,
@@ -406,6 +408,7 @@ export class PublicService {
         id: true,
         name: true,
         description: true,
+        imageUrl: true,
         price: true,
         category: {
           select: {
@@ -467,6 +470,41 @@ export class PublicService {
         currency: branch.organization.currency,
       },
       categories: Array.from(categories.values()),
+    };
+  }
+
+  async getAvailableTables(branchId: string) {
+    const branch = await this.getPublicBranch(branchId);
+
+    const tables = await this.prisma.table.findMany({
+      where: {
+        organizationId: branch.organizationId,
+        branchId: branch.id,
+        isActive: true,
+        customerSelectable: true,
+        status: 'AVAILABLE',
+      },
+      select: {
+        id: true,
+        name: true,
+        capacity: true,
+        location: true,
+        photoUrl: true,
+        customerSelectable: true,
+        status: true,
+      },
+      orderBy: {
+        name: 'asc',
+      },
+    });
+
+    return {
+      branch: {
+        id: branch.id,
+        name: branch.name,
+        slug: branch.slug,
+      },
+      tables,
     };
   }
 }

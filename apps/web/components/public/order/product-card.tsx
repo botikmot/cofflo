@@ -1,5 +1,7 @@
 "use client";
 
+import { Plus } from "lucide-react";
+
 import type { PublicMenuProduct } from "@/types/menu";
 
 type ProductCardProps = {
@@ -15,28 +17,49 @@ export function ProductCard({ product, currency, onAdd }: ProductCardProps) {
   }).format(Number(product.price));
 
   return (
-    <div className="rounded-2xl border p-4">
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <h3 className="font-semibold">{product.name}</h3>
-
-          {product.description && (
-            <p className="mt-1 text-sm text-muted-foreground">
-              {product.description}
-            </p>
-          )}
-
-          <p className="mt-3 font-medium">{price}</p>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => onAdd(product)}
-          className="shrink-0 rounded-xl bg-black px-4 py-2 text-sm font-medium text-white"
-        >
-          Add
-        </button>
+    <article className="group overflow-hidden rounded-3xl border border-[#EDE4D8] bg-white shadow-[0_4px_18px_rgba(43,33,24,0.04)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_32px_rgba(43,33,24,0.08)]">
+      {/* Image */}
+      <div className="relative aspect-[4/3] overflow-hidden bg-[#F3ECE4]">
+        {product.imageUrl ? (
+          <img
+            src={product.imageUrl}
+            alt={product.name}
+            className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.04]"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#E8D9CA] text-2xl">
+              ☕
+            </div>
+          </div>
+        )}
       </div>
-    </div>
+
+      {/* Content */}
+      <div className="p-4">
+        <h3 className="line-clamp-2 text-sm font-bold leading-5 text-[#2B2118] sm:text-[15px]">
+          {product.name}
+        </h3>
+
+        {product.description && (
+          <p className="mt-1.5 line-clamp-2 text-xs leading-5 text-[#8A7866]">
+            {product.description}
+          </p>
+        )}
+
+        <div className="mt-4 flex items-center justify-between gap-3">
+          <p className="text-base font-black text-[#6F4E37]">{price}</p>
+
+          <button
+            type="button"
+            onClick={() => onAdd(product)}
+            aria-label={`Add ${product.name}`}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#6F4E37] text-white shadow-sm transition hover:bg-[#5D402E] active:scale-95"
+          >
+            <Plus className="h-4 w-4" strokeWidth={2.5} />
+          </button>
+        </div>
+      </div>
+    </article>
   );
 }

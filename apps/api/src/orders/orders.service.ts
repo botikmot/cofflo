@@ -266,8 +266,19 @@ export class OrdersService {
   ) {
     const publicToken = randomBytes(24).toString('base64url');
 
-    let tableId: string | undefined;
+    const isQrOrder = Boolean(dto.qrToken);
 
+    /*
+     * Start with a table selected by the customer.
+     * For QR orders, this will be replaced by the QR table.
+     */
+    let tableId: string | undefined = dto.tableId;
+
+    /*
+     * QR ORDER
+     *
+     * The QR token is the source of truth for the table.
+     */
     if (dto.qrToken) {
       const table = await this.prisma.table.findFirst({
         where: {
@@ -302,8 +313,68 @@ export class OrdersService {
       tableId = table.id;
     }
 
-    if (tableId && dto.orderType !== OrderTypeDto.DINE_IN) {
-      throw new BadRequestException('QR table orders must be dine-in orders.');
+    /*
+     * DINE-IN MUST HAVE A TABLE
+     *
+     * Normal public Dine-in:
+     * customer selects the table manually.
+     *
+     * QR Dine-in:
+     * table comes from the QR code.
+     */
+    if (dto.orderType === OrderTypeDto.DINE_IN && !tableId) {
+      throw new BadRequestException(
+        'Please select a table for dine-in orders.',
+      );
+    }
+
+    /*
+     * TABLE VALIDATION
+     */
+    if (tableId) {
+      if (dto.orderType !== OrderTypeDto.DINE_IN) {
+        throw new BadRequestException(
+          'A table can only be used for dine-in orders.',
+        );
+      }
+
+      const table = await this.prisma.table.findFirst({
+        where: {
+          id: tableId,
+          organizationId,
+          branchId,
+          isActive: true,
+        },
+        select: {
+          id: true,
+          status: true,
+          customerSelectable: true,
+        },
+      });
+
+      if (!table) {
+        throw new NotFoundException('Table not found in this branch.');
+      }
+
+      if (!table.customerSelectable) {
+        throw new BadRequestException(
+          'This table is not available for customer ordering.',
+        );
+      }
+
+      /*
+       * Manually selected tables must still be AVAILABLE.
+       *
+       * QR tables are allowed to be already occupied because
+       * the customer is ordering for the table they are already at.
+       */
+      if (!isQrOrder && table.status !== 'AVAILABLE') {
+        throw new BadRequestException('This table is no longer available.');
+      }
+
+      if (isQrOrder && table.status === 'UNAVAILABLE') {
+        throw new BadRequestException('This table is currently unavailable.');
+      }
     }
 
     return this.createOrder({
@@ -460,6 +531,7 @@ export class OrdersService {
       },
       include: {
         items: true,
+        table: true,
       },
     });
   }

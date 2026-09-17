@@ -169,15 +169,18 @@ export default function NewOrderPage() {
     try {
       const order = await createOrder.mutateAsync({
         orderType,
+
         ...(orderType === "DINE_IN" && selectedTableId
           ? {
               tableId: selectedTableId,
             }
           : {}),
+
         items: cart.map((item) => ({
           productId: item.productId,
           quantity: item.quantity,
         })),
+
         ...(notes.trim()
           ? {
               notes: notes.trim(),

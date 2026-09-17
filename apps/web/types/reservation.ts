@@ -17,6 +17,7 @@ export type ReservationTable = {
 export type PublicReservation = {
   publicToken: string;
   customerName: string;
+  customerPhone: string;
   guestCount: number;
   startAt: string;
   endAt: string;

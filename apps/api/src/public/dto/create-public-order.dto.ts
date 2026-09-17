@@ -27,6 +27,10 @@ export class CreatePublicOrderDto {
 
   @IsOptional()
   @IsString()
+  tableId?: string;
+
+  @IsOptional()
+  @IsString()
   qrToken?: string;
 
   @IsArray()

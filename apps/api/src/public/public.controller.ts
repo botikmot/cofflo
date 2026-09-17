@@ -29,6 +29,7 @@ export class PublicController {
       organization: {
         id: branch.organization.id,
         name: branch.organization.name,
+        description: branch.organization.description,
         slug: branch.organization.slug,
         currency: branch.organization.currency,
       },
@@ -122,6 +123,11 @@ export class PublicController {
   @Get('branches/:branchId/menu')
   async getPublicMenu(@Param('branchId') branchId: string) {
     return this.publicService.getPublicMenu(branchId);
+  }
+
+  @Get('branches/:branchId/tables')
+  async getAvailableTables(@Param('branchId') branchId: string) {
+    return this.publicService.getAvailableTables(branchId);
   }
 
   @Get('orders/:publicToken')

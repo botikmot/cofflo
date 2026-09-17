@@ -7,6 +7,7 @@ export type PublicOrderItemPayload = {
 
 export type CreatePublicOrderPayload = {
   orderType: PublicOrderType;
+  tableId?: string;
   qrToken?: string;
   items: PublicOrderItemPayload[];
   notes?: string;
@@ -32,6 +33,12 @@ export type PublicOrderResponse = {
     unitPrice: string;
     subtotal: string;
   }[];
+  branch: {
+    name: string;
+    organization: {
+      name: string;
+    };
+  };
 };
 
 export type OrderStatus =

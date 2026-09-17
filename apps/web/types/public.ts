@@ -7,6 +7,7 @@ export type PublicBranchResponse = {
   organization: {
     id: string;
     name: string;
+    description: string;
     slug: string;
     currency: string;
   };
@@ -32,7 +33,27 @@ export type PublicTableQrResponse = {
   organization: {
     id: string;
     name: string;
+    description: string;
     slug: string;
     currency: string;
   };
+};
+
+export type PublicAvailableTable = {
+  id: string;
+  name: string;
+  capacity: number;
+  location: string | null;
+  photoUrl: string | null;
+  customerSelectable: boolean;
+  status: string;
+};
+
+export type PublicTablesResponse = {
+  branch: {
+    id: string;
+    name: string;
+    slug: string;
+  };
+  tables: PublicAvailableTable[];
 };
