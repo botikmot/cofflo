@@ -24,6 +24,94 @@ export class OrdersService {
     private readonly tableSessionsService: TableSessionsService,
   ) {}
 
+  private getTodayRange(timezone: string) {
+    const now = new Date();
+
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(now);
+
+    const year = Number(parts.find((part) => part.type === 'year')?.value);
+
+    const month = Number(parts.find((part) => part.type === 'month')?.value);
+
+    const day = Number(parts.find((part) => part.type === 'day')?.value);
+
+    const start = this.zonedDateTimeToUtc(year, month, day, timezone);
+
+    const nextDay = new Date(Date.UTC(year, month - 1, day + 1));
+
+    const nextParts = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(nextDay);
+
+    const nextYear = Number(
+      nextParts.find((part) => part.type === 'year')?.value,
+    );
+
+    const nextMonth = Number(
+      nextParts.find((part) => part.type === 'month')?.value,
+    );
+
+    const nextDayValue = Number(
+      nextParts.find((part) => part.type === 'day')?.value,
+    );
+
+    const end = this.zonedDateTimeToUtc(
+      nextYear,
+      nextMonth,
+      nextDayValue,
+      timezone,
+    );
+
+    return {
+      start,
+      end,
+    };
+  }
+
+  private zonedDateTimeToUtc(
+    year: number,
+    month: number,
+    day: number,
+    timezone: string,
+  ) {
+    const guess = new Date(Date.UTC(year, month - 1, day, 0, 0, 0));
+
+    const formatted = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hourCycle: 'h23',
+    }).formatToParts(guess);
+
+    const get = (type: string) =>
+      Number(formatted.find((part) => part.type === type)?.value);
+
+    const localAsUtc = Date.UTC(
+      get('year'),
+      get('month') - 1,
+      get('day'),
+      get('hour'),
+      get('minute'),
+      get('second'),
+    );
+
+    const offset = localAsUtc - guess.getTime();
+
+    return new Date(guess.getTime() - offset);
+  }
+
   private async createOrder(input: {
     organizationId: string;
     branchId: string;
@@ -430,28 +518,117 @@ export class OrdersService {
     return `${prefix}-${String(sequence).padStart(4, '0')}`;
   }
 
-  async findAll(organizationId: string, branchId: string) {
-    return this.prisma.order.findMany({
+  async findAll(
+    organizationId: string,
+    branchId: string,
+    page = 1,
+    limit = 20,
+    status?: OrderStatusDto,
+    search?: string,
+  ) {
+    const branch = await this.prisma.branch.findFirst({
       where: {
+        id: branchId,
         organizationId,
-        branchId,
       },
-      include: {
-        items: true,
-        table: true,
-        tableSession: {
-          select: {
-            id: true,
-            status: true,
-            openedAt: true,
-            closedAt: true,
-          },
-        },
-      },
-      orderBy: {
-        createdAt: 'desc',
+      select: {
+        timezone: true,
       },
     });
+
+    if (!branch) {
+      throw new NotFoundException('Branch not found.');
+    }
+
+    const safePage = Math.max(1, page);
+
+    const safeLimit = Math.min(Math.max(1, limit), 50);
+
+    const skip = (safePage - 1) * safeLimit;
+
+    const todayRange = this.getTodayRange(branch.timezone);
+
+    const where: Prisma.OrderWhereInput = {
+      organizationId,
+      branchId,
+
+      createdAt: {
+        gte: todayRange.start,
+        lt: todayRange.end,
+      },
+
+      ...(status
+        ? {
+            status,
+          }
+        : {}),
+
+      ...(search?.trim()
+        ? {
+            OR: [
+              {
+                orderNumber: {
+                  contains: search.trim(),
+                  mode: 'insensitive',
+                },
+              },
+              {
+                table: {
+                  name: {
+                    contains: search.trim(),
+                    mode: 'insensitive',
+                  },
+                },
+              },
+            ],
+          }
+        : {}),
+    };
+
+    const [orders, total] = await Promise.all([
+      this.prisma.order.findMany({
+        where,
+
+        include: {
+          items: true,
+
+          table: true,
+
+          tableSession: {
+            select: {
+              id: true,
+              status: true,
+              openedAt: true,
+              closedAt: true,
+            },
+          },
+        },
+
+        orderBy: [
+          {
+            createdAt: 'asc',
+          },
+        ],
+
+        skip,
+        take: safeLimit,
+      }),
+
+      this.prisma.order.count({
+        where,
+      }),
+    ]);
+
+    return {
+      data: orders,
+
+      meta: {
+        page: safePage,
+        limit: safeLimit,
+        total,
+        totalPages: Math.ceil(total / safeLimit),
+      },
+    };
   }
 
   async findOne(organizationId: string, branchId: string, orderId: string) {

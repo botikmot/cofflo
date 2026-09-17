@@ -5,6 +5,7 @@ import { ClipboardList, Coffee, ShoppingBag, Users } from "lucide-react";
 import { useWorkspace } from "@/hooks/auth/use-workspace";
 import { useDashboard } from "@/hooks/dashboard/use-dashboard";
 import type { DashboardTable } from "@/types/dashboard";
+import type { Order } from "@/types/order";
 
 import {
   calculateOccupiedTables,
@@ -16,6 +17,26 @@ import {
 
 import { CoffeeLoading } from "@/components/ui/coffee-loading";
 //import { CoffeeVisual } from "@/components/dashboard/coffee-visual";
+
+function normalizeDashboardOrders(value: unknown): Order[] {
+  if (Array.isArray(value)) {
+    return value as Order[];
+  }
+
+  if (value && typeof value === "object" && "data" in value) {
+    const data = (
+      value as {
+        data?: unknown;
+      }
+    ).data;
+
+    if (Array.isArray(data)) {
+      return data as Order[];
+    }
+  }
+
+  return [];
+}
 
 export default function DashboardPage() {
   const { activeMembership, isLoading: workspaceLoading } = useWorkspace();
@@ -79,7 +100,9 @@ export default function DashboardPage() {
     );
   }
 
-  const todayOrders = getTodayOrders(data.orders);
+  const dashboardOrders = normalizeDashboardOrders(data.orders);
+
+  const todayOrders = getTodayOrders(dashboardOrders);
 
   const todaySales = calculateTodaySales(data.orders);
 

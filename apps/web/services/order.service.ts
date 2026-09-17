@@ -8,6 +8,7 @@ import type {
   RecordPaymentResponse,
   UpdateOrderStatusPayload,
   OrderType,
+  OrderStatus,
 } from "@/types/order";
 
 export type CreateOrderItemPayload = {
@@ -25,6 +26,23 @@ export type CreateOrderPayload = {
   notes?: string;
 };
 
+export type GetOrdersParams = {
+  page?: number;
+  limit?: number;
+  status?: "ALL" | OrderStatus;
+  search?: string;
+};
+
+export type OrdersResponse = {
+  data: Order[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+};
+
 export const orderService = {
   createPublicOrder(branchId: string, payload: CreatePublicOrderPayload) {
     return apiFetch<PublicOrderResponse>(
@@ -40,9 +58,27 @@ export const orderService = {
     return apiFetch<PublicOrderResponse>(`/public/orders/${publicToken}`);
   },
 
-  getOrders(organizationId: string, branchId: string) {
-    return apiFetch<Order[]>(
-      `/organizations/${organizationId}/branches/${branchId}/orders`,
+  async getOrders(
+    organizationId: string,
+    branchId: string,
+    params: GetOrdersParams = {},
+  ): Promise<OrdersResponse> {
+    const query = new URLSearchParams();
+
+    query.set("page", String(params.page ?? 1));
+
+    query.set("limit", String(params.limit ?? 20));
+
+    if (params.status && params.status !== "ALL") {
+      query.set("status", params.status);
+    }
+
+    if (params.search?.trim()) {
+      query.set("search", params.search.trim());
+    }
+
+    return apiFetch<OrdersResponse>(
+      `/organizations/${organizationId}/branches/${branchId}/orders?${query.toString()}`,
     );
   },
 

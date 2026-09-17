@@ -1,4 +1,36 @@
 import type { DashboardOrder, DashboardTable } from "@/types/dashboard";
+import type { Order } from "@/types/order";
+
+function normalizeOrders(value: unknown): Order[] {
+  if (Array.isArray(value)) {
+    return value as Order[];
+  }
+
+  if (value && typeof value === "object") {
+    const objectValue = value as {
+      data?: unknown;
+      orders?: unknown;
+    };
+
+    // { data: Order[] }
+    if (Array.isArray(objectValue.data)) {
+      return objectValue.data as Order[];
+    }
+
+    // { orders: Order[] }
+    if (Array.isArray(objectValue.orders)) {
+      return objectValue.orders as Order[];
+    }
+
+    // Handle nested response:
+    // { data: { data: Order[] } }
+    if (objectValue.data && typeof objectValue.data === "object") {
+      return normalizeOrders(objectValue.data);
+    }
+  }
+
+  return [];
+}
 
 export function getTodayBounds() {
   const now = new Date();
@@ -12,7 +44,7 @@ export function getTodayBounds() {
   };
 }
 
-export function getTodayOrders(orders: DashboardOrder[]) {
+export function getTodayOrders(orders: Order[]) {
   const { start, end } = getTodayBounds();
 
   return orders.filter((order) => {
@@ -22,11 +54,17 @@ export function getTodayOrders(orders: DashboardOrder[]) {
   });
 }
 
-export function calculateTodaySales(orders: DashboardOrder[]) {
-  return getTodayOrders(orders)
-    .filter(
-      (order) => order.status !== "CANCELLED" && order.paymentStatus === "PAID",
-    )
+export function calculateTodaySales(value: unknown) {
+  const orders = normalizeOrders(value);
+
+  const { start, end } = getTodayBounds();
+
+  return orders
+    .filter((order) => {
+      const createdAt = new Date(order.createdAt);
+
+      return createdAt >= start && createdAt <= end;
+    })
     .reduce((total, order) => total + Number(order.total), 0);
 }
 
