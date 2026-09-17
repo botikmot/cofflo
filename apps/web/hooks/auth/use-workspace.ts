@@ -6,7 +6,7 @@ import { useCurrentUser } from "./use-current-user";
 import { useWorkspaceStore } from "@/stores/workspace.store";
 
 export function useWorkspace() {
-  const { data, isLoading, isError } = useCurrentUser();
+  const { data, isLoading, isError, refetch } = useCurrentUser();
 
   const activeMembershipId = useWorkspaceStore(
     (state) => state.activeMembershipId,
@@ -43,5 +43,6 @@ export function useWorkspace() {
     activeMembership,
     isLoading,
     isError,
+    refetchUser: refetch,
   };
 }

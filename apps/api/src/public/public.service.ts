@@ -86,6 +86,7 @@ export class PublicService {
             id: true,
             name: true,
             description: true,
+            tagline: true,
             slug: true,
             currency: true,
           },

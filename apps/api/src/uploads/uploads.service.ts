@@ -160,4 +160,59 @@ export class UploadsService {
       uploadStream.end(file.buffer);
     });
   }
+
+  async uploadProfileImage(file: Express.Multer.File, userId: string) {
+    this.validateImage(file);
+
+    if (this.storageDriver !== 'cloudinary') {
+      throw new BadRequestException(
+        'Profile image upload requires Cloudinary storage.',
+      );
+    }
+
+    return new Promise<{ url: string; publicId: string }>((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder: `cofflo/users/${userId}`,
+          resource_type: 'image',
+          transformation: [
+            {
+              width: 600,
+              height: 600,
+              crop: 'fill',
+              gravity: 'face',
+            },
+          ],
+          quality: 'auto',
+          fetch_format: 'auto',
+        },
+        (
+          error: UploadApiErrorResponse | undefined,
+          uploadResult: UploadApiResponse | undefined,
+        ) => {
+          if (error || !uploadResult) {
+            reject(error ?? new Error('Profile image upload failed.'));
+            return;
+          }
+
+          resolve({
+            url: uploadResult.secure_url,
+            publicId: uploadResult.public_id,
+          });
+        },
+      );
+
+      uploadStream.end(file.buffer);
+    });
+  }
+
+  async deleteImage(publicId: string) {
+    if (this.storageDriver !== 'cloudinary') {
+      return;
+    }
+
+    await cloudinary.uploader.destroy(publicId, {
+      resource_type: 'image',
+    });
+  }
 }

@@ -10,19 +10,20 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { OrganizationAccessGuard } from './guards/organization-access.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
+import { UploadsModule } from '../uploads/uploads.module';
 
 @Module({
   imports: [
     ConfigModule,
     PassportModule,
+    UploadsModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
         const secret = configService.get<string>('JWT_SECRET');
 
-        const expiresIn =
-          configService.get<string>('JWT_EXPIRES_IN') ?? '1d';
+        const expiresIn = configService.get<string>('JWT_EXPIRES_IN') ?? '1d';
 
         if (!secret) {
           throw new Error('JWT_SECRET is not defined');
@@ -45,11 +46,6 @@ import { RolesGuard } from './guards/roles.guard';
     OrganizationAccessGuard,
     RolesGuard,
   ],
-  exports: [
-    AuthService, 
-    JwtAuthGuard, 
-    OrganizationAccessGuard,
-    RolesGuard,
-  ],
+  exports: [AuthService, JwtAuthGuard, OrganizationAccessGuard, RolesGuard],
 })
 export class AuthModule {}

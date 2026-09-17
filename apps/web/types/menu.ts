@@ -25,7 +25,7 @@ export type PublicMenuResponse = {
   organization: {
     id: string;
     name: string;
-    description: string;
+    tagline: string;
     slug: string;
     currency: string;
   };

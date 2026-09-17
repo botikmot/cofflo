@@ -7,7 +7,7 @@ export type PublicBranchResponse = {
   organization: {
     id: string;
     name: string;
-    description: string;
+    tagline: string;
     slug: string;
     currency: string;
   };
@@ -33,7 +33,7 @@ export type PublicTableQrResponse = {
   organization: {
     id: string;
     name: string;
-    description: string;
+    tagline: string;
     slug: string;
     currency: string;
   };

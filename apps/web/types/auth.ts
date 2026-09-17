@@ -1,7 +1,7 @@
 export type Organization = {
   id: string;
   name: string;
-  description: string;
+  tagline: string;
   slug: string;
   status: string;
 };
@@ -31,6 +31,8 @@ export type AuthUser = {
   firstName: string;
   lastName: string;
   status: string;
+  avatarUrl?: string | null;
+  avatarPublicId?: string | null;
   memberships: AuthMembership[];
 };
 
@@ -52,7 +54,7 @@ export type AuthMembership = {
   organization: {
     id: string;
     name: string;
-    description: string;
+    tagline: string;
     slug: string;
     status: string;
   };

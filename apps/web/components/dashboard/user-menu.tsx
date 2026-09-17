@@ -4,14 +4,21 @@ import { ChevronDown, LogOut, Settings, User } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { useWorkspaceStore } from "@/stores/workspace.store";
+import Link from "next/link";
 
 type UserMenuProps = {
   firstName?: string;
   lastName?: string;
+  avatarUrl?: string | null;
   role?: string;
 };
 
-export function UserMenu({ firstName, lastName, role }: UserMenuProps) {
+export function UserMenu({
+  firstName,
+  lastName,
+  avatarUrl,
+  role,
+}: UserMenuProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -43,7 +50,15 @@ export function UserMenu({ firstName, lastName, role }: UserMenuProps) {
         "
       >
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#6F4E37] text-sm font-semibold text-white shadow-sm">
-          {initial}
+          {avatarUrl ? (
+            <img
+              src={avatarUrl}
+              alt={firstName ?? "User"}
+              className="h-full w-full rounded-xl object-cover"
+            />
+          ) : (
+            <span>{initial}</span>
+          )}
         </div>
 
         <div className="hidden text-left leading-tight xl:block">
@@ -84,8 +99,8 @@ export function UserMenu({ firstName, lastName, role }: UserMenuProps) {
         </div>
 
         <div className="space-y-1 pt-2">
-          <button
-            type="button"
+          <Link
+            href="/profile"
             className="
               flex w-full items-center gap-3
               rounded-xl px-3 py-2.5
@@ -97,10 +112,10 @@ export function UserMenu({ firstName, lastName, role }: UserMenuProps) {
           >
             <User className="h-4 w-4" />
             Profile
-          </button>
+          </Link>
 
-          <button
-            type="button"
+          <Link
+            href="/settings"
             className="
               flex w-full items-center gap-3
               rounded-xl px-3 py-2.5
@@ -112,7 +127,7 @@ export function UserMenu({ firstName, lastName, role }: UserMenuProps) {
           >
             <Settings className="h-4 w-4" />
             Account settings
-          </button>
+          </Link>
 
           <div className="my-1 border-t border-[#EFE7DE]" />
 

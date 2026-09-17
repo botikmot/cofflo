@@ -358,8 +358,8 @@ export default function PublicBranchPage() {
           </p>
 
           <p>
-            {data.organization.description
-              ? data.organization.description
+            {data.organization.tagline
+              ? data.organization.tagline
               : "Welcome. Relax. Enjoy your coffee."}
           </p>
         </div>

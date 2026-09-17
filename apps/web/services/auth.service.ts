@@ -34,7 +34,7 @@ export type SelectContextResponse = {
   organization: {
     id: string;
     name: string;
-    description: string;
+    tagline: string;
     slug: string;
     status: string;
   };

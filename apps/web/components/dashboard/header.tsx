@@ -84,8 +84,7 @@ export function Header() {
                 businessName={organization?.name ?? "Your Business"}
                 logoUrl={null}
                 description={
-                  organization?.description ??
-                  "A cozy neighborhood coffee shop."
+                  organization?.tagline ?? "A cozy neighborhood coffee shop."
                 }
               />
             </div>
@@ -140,6 +139,7 @@ export function Header() {
               <UserMenu
                 firstName={user?.firstName}
                 lastName={user?.lastName}
+                avatarUrl={user?.avatarUrl}
                 role={role}
               />
 
