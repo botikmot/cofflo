@@ -46,6 +46,47 @@ export type SelectContextResponse = {
   };
 };
 
+export type OnboardOrganizationPayload = {
+  organizationName: string;
+  branchName: string;
+  currency: string;
+  firstName: string;
+  lastName?: string;
+  email: string;
+  password: string;
+};
+
+export type OnboardOrganizationResponse = {
+  accessToken: string;
+
+  user: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string | null;
+    status: string;
+  };
+
+  organization: {
+    id: string;
+    name: string;
+    slug: string;
+    status: string;
+  };
+
+  branch: {
+    id: string;
+    name: string;
+    slug: string;
+    isActive: boolean;
+  };
+
+  membership: {
+    id: string;
+    role: string;
+  };
+};
+
 export async function login(payload: LoginPayload) {
   return apiFetch<LoginResponse>("/auth/login", {
     method: "POST",
@@ -55,6 +96,13 @@ export async function login(payload: LoginPayload) {
 
 export async function selectContext(payload: SelectContextPayload) {
   return apiFetch<SelectContextResponse>("/auth/context", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function onboardOrganization(payload: OnboardOrganizationPayload) {
+  return apiFetch<OnboardOrganizationResponse>("/organizations/onboard", {
     method: "POST",
     body: JSON.stringify(payload),
   });

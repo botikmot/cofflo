@@ -111,6 +111,16 @@ export default function LoginPage() {
             {isLoading ? "Signing in..." : "Sign in"}
           </button>
         </form>
+
+        <p className="mt-6 text-center text-sm text-[#8B7D70]">
+          Don&apos;t have an account?{" "}
+          <a
+            href="/register"
+            className="font-semibold text-[#6F4E37] hover:underline"
+          >
+            Create workspace
+          </a>
+        </p>
       </div>
     </main>
   );

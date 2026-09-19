@@ -89,7 +89,19 @@ export class SettingsService {
       throw new NotFoundException('Organization not found.');
     }
 
-    return organization;
+    const user = await this.prisma.user.findUnique({
+      where: {
+        id: userId,
+      },
+      select: {
+        email: true,
+      },
+    });
+
+    return {
+      ...organization,
+      email: organization.email ?? user?.email ?? null,
+    };
   }
 
   async updateOrganizationSettings(
@@ -296,6 +308,30 @@ export class SettingsService {
         timezone: true,
         isActive: true,
         updatedAt: true,
+      },
+    });
+  }
+
+  async updateOrganizationLogo(
+    userId: string,
+    organizationId: string,
+    logoUrl: string,
+    logoPublicId: string,
+  ) {
+    await this.getMembership(userId, organizationId);
+
+    return this.prisma.organization.update({
+      where: {
+        id: organizationId,
+      },
+      data: {
+        logoUrl,
+        logoPublicId,
+      },
+      select: {
+        id: true,
+        logoUrl: true,
+        logoPublicId: true,
       },
     });
   }

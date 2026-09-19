@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 
 import { ConfigService } from '@nestjs/config';
+import { PrismaService } from '../prisma/prisma.service';
 import {
   v2 as cloudinary,
   type UploadApiErrorResponse,
@@ -12,7 +13,10 @@ type StorageDriver = 'cloudinary' | 'local';
 
 @Injectable()
 export class UploadsService {
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly prisma: PrismaService,
+  ) {
     if (this.storageDriver === 'cloudinary') {
       cloudinary.config({
         cloud_name: this.configService.getOrThrow<string>(
@@ -214,5 +218,92 @@ export class UploadsService {
     await cloudinary.uploader.destroy(publicId, {
       resource_type: 'image',
     });
+  }
+
+  async uploadOrganizationLogo(
+    file: Express.Multer.File,
+    organizationId: string,
+    userId: string,
+  ) {
+    this.validateImage(file);
+
+    if (this.storageDriver !== 'cloudinary') {
+      throw new BadRequestException(
+        'Organization logo upload requires Cloudinary storage.',
+      );
+    }
+
+    // Make sure the user belongs to this organization.
+    const membership = await this.prisma.membership.findFirst({
+      where: {
+        userId,
+        organizationId,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!membership) {
+      throw new BadRequestException(
+        'You do not have access to this organization.',
+      );
+    }
+
+    const result = await new Promise<{
+      secure_url: string;
+      public_id: string;
+    }>((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder: `cofflo/organizations/${organizationId}/logo`,
+          resource_type: 'image',
+
+          transformation: [
+            {
+              width: 800,
+              height: 800,
+              crop: 'limit',
+            },
+          ],
+
+          quality: 'auto',
+          fetch_format: 'auto',
+        },
+
+        (
+          error: UploadApiErrorResponse | undefined,
+          uploadResult: UploadApiResponse | undefined,
+        ) => {
+          if (error || !uploadResult) {
+            reject(error ?? new Error('Organization logo upload failed.'));
+
+            return;
+          }
+
+          resolve({
+            secure_url: uploadResult.secure_url,
+            public_id: uploadResult.public_id,
+          });
+        },
+      );
+
+      uploadStream.end(file.buffer);
+    });
+
+    await this.prisma.organization.update({
+      where: {
+        id: organizationId,
+      },
+      data: {
+        logoUrl: result.secure_url,
+        logoPublicId: result.public_id,
+      },
+    });
+
+    return {
+      url: result.secure_url,
+      publicId: result.public_id,
+    };
   }
 }

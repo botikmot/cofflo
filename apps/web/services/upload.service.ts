@@ -10,6 +10,11 @@ export type TableImageUploadResponse = {
   publicId: string;
 };
 
+export type OrganizationLogoUploadResponse = {
+  url: string;
+  publicId: string;
+};
+
 export const uploadService = {
   async uploadProductImage(organizationId: string, file: File) {
     const formData = new FormData();
@@ -35,6 +40,23 @@ export const uploadService = {
 
     return apiFetch<TableImageUploadResponse>(
       `/organizations/${organizationId}/uploads/table-image`,
+      {
+        method: "POST",
+        body: formData,
+      },
+    );
+  },
+
+  async uploadOrganizationLogo(
+    organizationId: string,
+    file: File,
+  ): Promise<OrganizationLogoUploadResponse> {
+    const formData = new FormData();
+
+    formData.append("file", file);
+
+    return apiFetch<OrganizationLogoUploadResponse>(
+      `/organizations/${organizationId}/uploads/organization-logo`,
       {
         method: "POST",
         body: formData,

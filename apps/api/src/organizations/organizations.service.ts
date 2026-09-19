@@ -63,6 +63,15 @@ export class OrganizationsService {
       },
       include: {
         branches: true,
+        memberships: {
+          include: {
+            user: {
+              select: {
+                email: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -70,33 +79,29 @@ export class OrganizationsService {
       throw new NotFoundException('Organization not found');
     }
 
-    return organization;
+    const email =
+      organization.email ?? organization.memberships[0]?.user?.email ?? null;
+
+    return {
+      ...organization,
+      email,
+    };
   }
 
-  async onboard(
-    dto: OnboardOrganizationDto,
-  ) {
-    const normalizedEmail = dto.email
-      .trim()
-      .toLowerCase();
+  async onboard(dto: OnboardOrganizationDto) {
+    const normalizedEmail = dto.email.trim().toLowerCase();
 
-    const organizationName =
-      dto.organizationName.trim();
+    const organizationName = dto.organizationName.trim();
 
-    const branchName =
-      dto.branchName.trim();
+    const branchName = dto.branchName.trim();
 
-    const firstName =
-      dto.firstName.trim();
+    const firstName = dto.firstName.trim();
 
-    const lastName =
-      dto.lastName?.trim() || null;
+    const lastName = dto.lastName?.trim() || null;
 
-    const organizationSlug =
-      slugify(organizationName);
+    const organizationSlug = slugify(organizationName);
 
-    const branchSlug =
-      slugify(branchName);
+    const branchSlug = slugify(branchName);
 
     if (!organizationSlug) {
       throw new ConflictException(
@@ -105,98 +110,87 @@ export class OrganizationsService {
     }
 
     if (!branchSlug) {
-      throw new ConflictException(
-        'Branch name must contain valid characters',
-      );
+      throw new ConflictException('Branch name must contain valid characters');
     }
 
-    const existingUser =
-      await this.prisma.user.findUnique({
-        where: {
-          email: normalizedEmail,
-        },
-        select: {
-          id: true,
-        },
-      });
+    const existingUser = await this.prisma.user.findUnique({
+      where: {
+        email: normalizedEmail,
+      },
+      select: {
+        id: true,
+      },
+    });
 
     if (existingUser) {
-      throw new ConflictException(
-        'Email is already registered',
-      );
+      throw new ConflictException('Email is already registered');
     }
 
-    const existingOrganization =
-      await this.prisma.organization.findUnique({
-        where: {
-          slug: organizationSlug,
-        },
-        select: {
-          id: true,
-        },
-      });
+    const existingOrganization = await this.prisma.organization.findUnique({
+      where: {
+        slug: organizationSlug,
+      },
+      select: {
+        id: true,
+      },
+    });
 
     if (existingOrganization) {
-      throw new ConflictException(
-        'Organization name is already taken',
-      );
+      throw new ConflictException('Organization name is already taken');
     }
 
-    const passwordHash =
-      await bcrypt.hash(dto.password, 12);
+    const passwordHash = await bcrypt.hash(dto.password, 12);
 
-    const result =
-      await this.prisma.$transaction(
-        async (tx) => {
-          const user = await tx.user.create({
-            data: {
-              email: normalizedEmail,
-              passwordHash,
-              firstName,
-              lastName,
-            },
-          });
-
-          const organization =
-            await tx.organization.create({
-              data: {
-                name: organizationName,
-                slug: organizationSlug,
-              },
-            });
-
-          const branch = await tx.branch.create({
-            data: {
-              organizationId: organization.id,
-              name: branchName,
-              slug: branchSlug,
-            },
-          });
-
-          const membership =
-            await tx.membership.create({
-              data: {
-                userId: user.id,
-                organizationId: organization.id,
-                branchId: branch.id,
-                role: MembershipRole.OWNER,
-              },
-            });
-
-          return {
-            user,
-            organization,
-            branch,
-            membership,
-          };
+    const result = await this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          email: normalizedEmail,
+          passwordHash,
+          firstName,
+          lastName,
         },
-      );
-
-    const accessToken =
-      await this.authService.generateAccessToken({
-        id: result.user.id,
-        email: result.user.email,
       });
+
+      const organization = await tx.organization.create({
+        data: {
+          name: organizationName,
+          slug: organizationSlug,
+          currency: dto.currency,
+        },
+      });
+
+      const branch = await tx.branch.create({
+        data: {
+          organizationId: organization.id,
+          name: branchName,
+          slug: branchSlug,
+        },
+      });
+
+      const membership = await tx.membership.create({
+        data: {
+          userId: user.id,
+          organizationId: organization.id,
+          branchId: branch.id,
+          role: MembershipRole.OWNER,
+        },
+      });
+
+      return {
+        user,
+        organization,
+        branch,
+        membership,
+      };
+    });
+
+    const accessToken = await this.authService.generateAccessToken({
+      id: result.user.id,
+      email: result.user.email,
+      organizationId: result.organization.id,
+      branchId: result.branch.id,
+      role: result.membership.role,
+    });
 
     return {
       accessToken,

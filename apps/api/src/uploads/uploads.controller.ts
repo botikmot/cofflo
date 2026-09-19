@@ -13,6 +13,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OrganizationAccessGuard } from '../auth/guards/organization-access.guard';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 
 import { UploadsService } from './uploads.service';
 
@@ -52,5 +53,25 @@ export class UploadsController {
     @UploadedFile() file: Express.Multer.File,
   ) {
     return this.uploadsService.uploadTableImage(file, organizationId);
+  }
+
+  @Post('organization-logo')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: {
+        fileSize: 5 * 1024 * 1024,
+      },
+    }),
+  )
+  uploadOrganizationLogo(
+    @Param('organizationId') organizationId: string,
+    @UploadedFile() file: Express.Multer.File,
+    @CurrentUser() user: { id: string },
+  ) {
+    return this.uploadsService.uploadOrganizationLogo(
+      file,
+      organizationId,
+      user.id,
+    );
   }
 }

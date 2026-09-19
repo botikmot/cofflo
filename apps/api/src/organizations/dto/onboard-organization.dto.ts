@@ -3,8 +3,13 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsIn,
   MinLength,
 } from 'class-validator';
+import {
+  SUPPORTED_CURRENCIES,
+  type SupportedCurrency,
+} from '../../common/constants/currencies';
 
 export class OnboardOrganizationDto {
   @IsString()
@@ -14,6 +19,9 @@ export class OnboardOrganizationDto {
   @IsString()
   @IsNotEmpty()
   branchName: string;
+
+  @IsIn(SUPPORTED_CURRENCIES)
+  currency: SupportedCurrency;
 
   @IsString()
   @IsNotEmpty()

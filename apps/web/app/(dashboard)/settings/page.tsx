@@ -3,6 +3,8 @@
 import { useState, type ReactNode } from "react";
 import {
   Building2,
+  Camera,
+  ImageIcon,
   CheckCircle2,
   Globe2,
   LockKeyhole,
@@ -27,6 +29,7 @@ import { useBranches } from "@/hooks/branches/use-branches";
 import { createBranch, removeBranch } from "@/services/branches.service";
 
 import type { BranchSettings, OrganizationSettings } from "@/types/settings";
+import { uploadService } from "@/services/upload.service";
 
 export default function SettingsPage() {
   const {
@@ -170,6 +173,10 @@ function SettingsWorkspace({
   const [successMessage, setSuccessMessage] = useState("");
 
   const [errorMessage, setErrorMessage] = useState("");
+
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [logoUploadError, setLogoUploadError] = useState<string | null>(null);
+  const [logoUploadSuccess, setLogoUploadSuccess] = useState(false);
 
   function showSuccess(message: string) {
     setErrorMessage("");
@@ -413,6 +420,72 @@ function SettingsWorkspace({
     }
   }
 
+  async function handleLogoUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    setLogoUploadError(null);
+    setLogoUploadSuccess(false);
+
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+
+    if (!allowedTypes.includes(file.type)) {
+      setLogoUploadError("Please upload a JPG, PNG, or WebP image.");
+
+      event.target.value = "";
+      return;
+    }
+
+    const maxSize = 5 * 1024 * 1024;
+
+    if (file.size > maxSize) {
+      setLogoUploadError("Logo must not exceed 5 MB.");
+
+      event.target.value = "";
+      return;
+    }
+
+    if (!organizationId) {
+      setLogoUploadError("Organization could not be identified.");
+
+      event.target.value = "";
+      return;
+    }
+
+    try {
+      setIsUploadingLogo(true);
+
+      const result = await uploadService.uploadOrganizationLogo(
+        organizationId,
+        file,
+      );
+
+      setOrganizationForm((current) => ({
+        ...current,
+        logoUrl: result.url,
+      }));
+
+      setLogoUploadSuccess(true);
+    } catch (error) {
+      console.error("Failed to upload organization logo:", error);
+
+      setLogoUploadError(
+        error instanceof Error
+          ? error.message
+          : "Failed to upload organization logo.",
+      );
+    } finally {
+      setIsUploadingLogo(false);
+
+      event.target.value = "";
+    }
+  }
+
+  console.log("organization::", organization);
+
   return (
     <>
       <div className="space-y-5 pt-3 pb-8">
@@ -501,6 +574,101 @@ function SettingsWorkspace({
                     View only
                   </span>
                 )}
+              </div>
+            </div>
+
+            <div className="border-b border-[#E7DCCE] px-5 py-5 sm:px-6">
+              <div>
+                <h3 className="text-sm font-semibold text-[#3E342D]">
+                  Organization Logo
+                </h3>
+
+                <p className="mt-1 text-xs text-[#8A796B]">
+                  Upload your business logo. This will be used throughout
+                  Cofflo.
+                </p>
+              </div>
+
+              <div className="mt-4 flex items-center gap-5">
+                {/* Logo preview */}
+                <div className="relative shrink-0">
+                  <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl border border-[#E7DCCE] bg-[#F7F1EA]">
+                    {organizationForm.logoUrl ? (
+                      <img
+                        src={organizationForm.logoUrl}
+                        alt={`${organizationForm.name} logo`}
+                        className="h-full w-full object-contain p-2"
+                      />
+                    ) : (
+                      <ImageIcon className="h-8 w-8 text-[#B99D84]" />
+                    )}
+                  </div>
+
+                  {isUploadingLogo && (
+                    <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-black/40">
+                      <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    </div>
+                  )}
+                </div>
+
+                {/* Upload details */}
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-semibold text-[#3E342D]">
+                    {organizationForm.logoUrl
+                      ? "Your organization logo"
+                      : "Add your organization logo"}
+                  </p>
+
+                  <p className="mt-1 text-[11px] leading-5 text-[#9A8A7C]">
+                    Use a square or centered image for the best result. JPG, PNG
+                    or WebP · Maximum 5 MB.
+                  </p>
+                </div>
+
+                {/* Upload button */}
+                <div className="shrink-0">
+                  <label
+                    htmlFor="organization-logo"
+                    className={[
+                      "inline-flex h-9 cursor-pointer items-center gap-2 rounded-xl",
+                      "border border-[#DDD0C5]",
+                      "bg-[#FFFCF8]",
+                      "px-3 text-xs font-medium text-[#5F5044]",
+                      "transition hover:border-[#B99D84] hover:bg-[#F8F1EA]",
+                      isUploadingLogo ? "pointer-events-none opacity-50" : "",
+                    ].join(" ")}
+                  >
+                    <Camera className="h-3.5 w-3.5" />
+
+                    {isUploadingLogo
+                      ? "Uploading..."
+                      : organizationForm.logoUrl
+                        ? "Change Logo"
+                        : "Upload Logo"}
+
+                    <input
+                      id="organization-logo"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="hidden"
+                      onChange={handleLogoUpload}
+                      disabled={isUploadingLogo}
+                    />
+                  </label>
+
+                  {logoUploadError && (
+                    <p className="mt-2 max-w-[180px] text-right text-xs font-medium text-red-600">
+                      {logoUploadError}
+                    </p>
+                  )}
+
+                  {logoUploadSuccess && !logoUploadError && (
+                    <p className="mt-2 flex items-center justify-end gap-1 text-xs font-medium text-emerald-600">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      Updated
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
 

@@ -121,6 +121,7 @@ model Organization {
   currency String             @default("PHP")
 
   logoUrl        String?
+  logoPublicId   String?
   tagline        String?
   description    String?
   primaryColor   String?
