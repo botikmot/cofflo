@@ -16,6 +16,10 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   hydrated: false,
 
   setActiveMembershipId: (membershipId) => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
     localStorage.setItem("activeMembershipId", membershipId);
 
     set({
@@ -24,6 +28,10 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   },
 
   hydrate: () => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
     const membershipId = localStorage.getItem("activeMembershipId");
 
     set({
@@ -33,6 +41,10 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   },
 
   clearWorkspace: () => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
     localStorage.removeItem("activeMembershipId");
 
     set({

@@ -10,6 +10,7 @@ import { UserMenu } from "./user-menu";
 import { useWorkspace } from "@/hooks/auth/use-workspace";
 import { useWorkspaceStore } from "@/stores/workspace.store";
 import { selectContext } from "@/services/auth.service";
+import { NotificationBell } from "./notification-bell";
 
 export function Header() {
   const { user, memberships, activeMembership } = useWorkspace();
@@ -110,28 +111,10 @@ export function Header() {
               </div>
 
               {/* Notifications */}
-              <button
-                type="button"
-                aria-label="Notifications"
-                className="
-                  relative flex h-10 w-10
-                  items-center justify-center
-                  rounded-xl
-                  text-[#5F544A]
-                  transition-all duration-200
-                  hover:bg-[#F4EEE7]
-                "
-              >
-                <Bell className="h-[18px] w-[18px]" />
-
-                <span
-                  className="
-                    absolute right-2.5 top-2.5
-                    h-1.5 w-1.5 rounded-full
-                    bg-[#A45A3F]
-                  "
-                />
-              </button>
+              <NotificationBell
+                organizationId={activeMembership?.organizationId ?? null}
+                branchId={activeMembership?.branchId ?? null}
+              />
 
               <div className="hidden h-7 w-px bg-[#E8DED2] sm:block" />
 

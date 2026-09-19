@@ -107,6 +107,12 @@ enum TableSessionStatus {
   CLOSED
 }
 
+enum NotificationType {
+  TABLE_RESERVATION
+  WAITLIST_JOINED
+  NEW_ORDER
+}
+
 model Organization {
   id       String             @id @default(uuid())
   name     String
@@ -135,6 +141,7 @@ model Organization {
   reservations       Reservation[]       @relation("OrganizationReservations")
   queueEntries       QueueEntry[]        @relation("OrganizationQueueEntries")
   tableSessions      TableSession[]      @relation("OrganizationTableSessions")
+  notifications      Notification[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -173,6 +180,7 @@ model Branch {
   reservations       Reservation[]       @relation("BranchReservations")
   queueEntries       QueueEntry[]        @relation("BranchQueueEntries")
   tableSessions      TableSession[]      @relation("BranchTableSessions")
+  notifications      Notification[]
 
   @@unique([organizationId, slug])
   @@index([organizationId])
@@ -556,4 +564,34 @@ model TableSession {
   @@index([organizationId, branchId])
   @@index([tableId, status])
   @@index([branchId, status])
+}
+
+model Notification {
+  id String @id @default(uuid())
+
+  organizationId String
+  branchId       String
+
+  type NotificationType
+
+  title   String
+  message String
+
+  isRead Boolean @default(false)
+
+  referenceId   String?
+  referenceType String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([branchId])
+  @@index([branchId, isRead])
+  @@index([branchId, createdAt])
+  @@index([referenceId])
 }

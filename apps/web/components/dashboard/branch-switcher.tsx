@@ -33,23 +33,9 @@ export function BranchSwitcher({
 
   const hydrated = useWorkspaceStore((state) => state.hydrated);
 
-  const hydrateWorkspace = useWorkspaceStore((state) => state.hydrate);
-
   const setActiveMembershipId = useWorkspaceStore(
     (state) => state.setActiveMembershipId,
   );
-
-  /*
-   * ------------------------------------------------------------
-   * HYDRATE WORKSPACE
-   * ------------------------------------------------------------
-   */
-
-  useEffect(() => {
-    if (!hydrated) {
-      hydrateWorkspace();
-    }
-  }, [hydrated, hydrateWorkspace]);
 
   /*
    * ------------------------------------------------------------
@@ -66,12 +52,14 @@ export function BranchSwitcher({
    * ------------------------------------------------------------
    * ACTIVE MEMBERSHIP
    *
-   * Store is the preferred source.
-   * Prop remains as fallback for parent-driven state.
+   * After hydration, the persisted store value is authoritative.
+   * Before hydration, use the parent prop as temporary fallback.
    * ------------------------------------------------------------
    */
 
-  const activeMembershipId = storeActiveMembershipId ?? propActiveMembershipId;
+  const activeMembershipId = hydrated
+    ? storeActiveMembershipId
+    : propActiveMembershipId;
 
   const activeMembership = useMemo(() => {
     if (!branchMemberships.length) {
@@ -81,43 +69,43 @@ export function BranchSwitcher({
     return (
       branchMemberships.find(
         (membership) => membership.id === activeMembershipId,
-      ) ?? branchMemberships[0]
+      ) ?? null
     );
   }, [branchMemberships, activeMembershipId]);
 
   /*
    * ------------------------------------------------------------
    * ENSURE ACTIVE BRANCH EXISTS
+   *
+   * Only initialize a default branch when:
+   * - Workspace has hydrated
+   * - Branch memberships are available
+   * - No saved branch exists
+   * - Or saved branch is no longer available
    * ------------------------------------------------------------
    */
 
   useEffect(() => {
-    if (!hydrated) {
-      return;
-    }
-
-    if (!branchMemberships.length) {
+    if (!hydrated || !branchMemberships.length) {
       return;
     }
 
     const activeStillExists = branchMemberships.some(
-      (membership) => membership.id === activeMembershipId,
+      (membership) => membership.id === storeActiveMembershipId,
     );
 
-    /*
-     * No valid active membership:
-     * use the first available branch membership.
-     */
-    if (!activeMembershipId || !activeStillExists) {
-      const firstMembership = branchMemberships[0];
-
-      setActiveMembershipId(firstMembership.id);
-      onSelect(firstMembership.id);
+    if (storeActiveMembershipId && activeStillExists) {
+      return;
     }
+
+    const firstMembership = branchMemberships[0];
+
+    setActiveMembershipId(firstMembership.id);
+    onSelect(firstMembership.id);
   }, [
     hydrated,
     branchMemberships,
-    activeMembershipId,
+    storeActiveMembershipId,
     setActiveMembershipId,
     onSelect,
   ]);
@@ -278,24 +266,24 @@ export function BranchSwitcher({
                     type="button"
                     onClick={() => handleSelect(membership.id)}
                     className={`
-                        flex w-full items-center gap-3
-                        rounded-xl px-3 py-3
-                        text-left
-                        transition-all duration-150
-                        ${active ? "bg-[#F4ECE4]" : "hover:bg-[#FAF6F1]"}
-                      `}
+                      flex w-full items-center gap-3
+                      rounded-xl px-3 py-3
+                      text-left
+                      transition-all duration-150
+                      ${active ? "bg-[#F4ECE4]" : "hover:bg-[#FAF6F1]"}
+                    `}
                   >
                     <div
                       className={`
-                          flex h-9 w-9 shrink-0
-                          items-center justify-center
-                          rounded-xl
-                          ${
-                            active
-                              ? "bg-[#6F4E37] text-white"
-                              : "bg-[#F0E8DE] text-[#6F4E37]"
-                          }
-                        `}
+                        flex h-9 w-9 shrink-0
+                        items-center justify-center
+                        rounded-xl
+                        ${
+                          active
+                            ? "bg-[#6F4E37] text-white"
+                            : "bg-[#F0E8DE] text-[#6F4E37]"
+                        }
+                      `}
                     >
                       <MapPin className="h-4 w-4" />
                     </div>

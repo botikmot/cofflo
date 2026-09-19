@@ -2,7 +2,7 @@
 
 import { Check, Clock3, MoreHorizontal, RefreshCw, Users } from "lucide-react";
 import { createPortal } from "react-dom";
-import { useMemo, useState, type MouseEvent } from "react";
+import { useEffect, useMemo, useState, type MouseEvent } from "react";
 
 import { useWorkspace } from "@/hooks/auth/use-workspace";
 
@@ -16,7 +16,7 @@ import { useTables } from "@/hooks/tables/use-tables";
 
 import type { QueueEntry, QueueStatus } from "@/types/queue";
 import type { DashboardTable } from "@/types/dashboard";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { tableSessionService } from "@/services/table-session.service";
 
@@ -115,6 +115,10 @@ export default function QueuePage() {
   const [menuPosition, setMenuPosition] = useState<MenuPosition | null>(null);
 
   const router = useRouter();
+
+  const searchParams = useSearchParams();
+
+  const queueEntryId = searchParams.get("queueEntryId");
 
   const {
     data: queue = [],
@@ -355,6 +359,45 @@ export default function QueuePage() {
       );
     }
   }
+
+  useEffect(() => {
+    if (!queueEntryId) {
+      return;
+    }
+
+    if (!queue.length) {
+      return;
+    }
+
+    const entryExists = queue.some((entry) => entry.id === queueEntryId);
+
+    if (!entryExists) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      const element = document.getElementById(`queue-entry-${queueEntryId}`);
+
+      if (!element) {
+        return;
+      }
+
+      element.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+
+      element.classList.add("ring-2", "ring-[#6F4E37]", "rounded-xl");
+
+      window.setTimeout(() => {
+        element.classList.remove("ring-2", "ring-[#6F4E37]", "rounded-xl");
+      }, 2500);
+    }, 100);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [queueEntryId, queue]);
 
   return (
     <main className="space-y-6">
@@ -628,6 +671,7 @@ export default function QueuePage() {
                   {filteredQueue.map((entry) => (
                     <tr
                       key={entry.id}
+                      id={`queue-entry-${entry.id}`}
                       className="border-b border-[#F0E7DE] last:border-b-0"
                     >
                       <td className="px-5 py-4 align-middle">

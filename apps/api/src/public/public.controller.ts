@@ -3,12 +3,15 @@ import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { PublicService } from './public.service';
 import { OrdersService } from '../orders/orders.service';
 import { CreatePublicOrderDto } from './dto/create-public-order.dto';
+import { NotificationService } from '../notification/notification.service';
+import { NotificationType } from '@prisma/client';
 
 @Controller('public')
 export class PublicController {
   constructor(
     private readonly publicService: PublicService,
     private readonly ordersService: OrdersService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   @Get('tables/:qrToken')
@@ -99,6 +102,23 @@ export class PublicController {
       branch.id,
       dto,
     );
+
+    try {
+      await this.notificationService.create({
+        organizationId: branch.organizationId,
+        branchId: branch.id,
+        type: NotificationType.NEW_ORDER,
+        title: 'New Customer Order',
+        message: `New customer order ${order.orderNumber} has been placed.`,
+        referenceId: order.id,
+        referenceType: 'ORDER',
+      });
+    } catch (error) {
+      console.error(
+        '[Notifications] Failed to create order notification:',
+        error,
+      );
+    }
 
     return {
       publicToken: order.publicToken,

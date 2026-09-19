@@ -20,6 +20,7 @@ import { TableSessionsModule } from './table-sessions/table-sessions.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { ReportsModule } from './reports/reports.module';
 import { SettingsModule } from './settings/settings.module';
+import { NotificationModule } from './notification/notification.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { SettingsModule } from './settings/settings.module';
     UploadsModule,
     ReportsModule,
     SettingsModule,
+    NotificationModule,
   ],
   controllers: [AppController],
   providers: [AppService],

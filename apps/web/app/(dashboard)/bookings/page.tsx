@@ -14,7 +14,7 @@ import {
   Users,
 } from "lucide-react";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { useWorkspace } from "@/hooks/auth/use-workspace";
 
@@ -459,6 +459,10 @@ function ReservationActionMenu({
 export default function BookingsPage() {
   const router = useRouter();
 
+  const searchParams = useSearchParams();
+
+  const reservationId = searchParams.get("reservationId");
+
   const { user, activeMembership } = useWorkspace();
 
   const organizationId = activeMembership?.organizationId;
@@ -498,7 +502,15 @@ export default function BookingsPage() {
     const normalizedSearch = search.trim().toLowerCase();
 
     return reservations
-      .filter((reservation) => matchesFilter(reservation, filter))
+      .filter((reservation) => {
+        // If opened from a notification,
+        // always keep the target reservation visible.
+        if (reservationId && reservation.id === reservationId) {
+          return true;
+        }
+
+        return matchesFilter(reservation, filter);
+      })
       .filter((reservation) => {
         if (statusFilter === "ALL") {
           return true;
@@ -533,7 +545,7 @@ export default function BookingsPage() {
 
         return new Date(a.startAt).getTime() - new Date(b.startAt).getTime();
       });
-  }, [reservationsQuery.data, filter, statusFilter, search]);
+  }, [reservationsQuery.data, filter, statusFilter, search, reservationId]);
 
   /* ---------------------------------------------------------------------- */
   /* STATUS CHANGE                                                           */
@@ -638,6 +650,47 @@ export default function BookingsPage() {
       );
     }
   };
+
+  useEffect(() => {
+    if (!reservationId) {
+      return;
+    }
+
+    if (!reservationsQuery.data) {
+      return;
+    }
+
+    const reservationExists = reservationsQuery.data.some(
+      (reservation) => reservation.id === reservationId,
+    );
+
+    if (!reservationExists) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      const element = document.getElementById(`reservation-${reservationId}`);
+
+      if (!element) {
+        return;
+      }
+
+      element.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+
+      element.classList.add("ring-2", "ring-[#6F4E37]", "rounded-xl");
+
+      window.setTimeout(() => {
+        element.classList.remove("ring-2", "ring-[#6F4E37]", "rounded-xl");
+      }, 2500);
+    }, 100);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [reservationId, reservationsQuery.data]);
 
   return (
     <div className="space-y-6">
@@ -834,6 +887,7 @@ export default function BookingsPage() {
                   {filteredReservations.map((reservation) => (
                     <tr
                       key={reservation.id}
+                      id={`reservation-${reservation.id}`}
                       className="border-b border-[#F0E8DF] last:border-b-0"
                     >
                       {/* CUSTOMER */}

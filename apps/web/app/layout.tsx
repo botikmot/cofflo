@@ -20,6 +20,15 @@ const fraunces = Fraunces({
 export const metadata: Metadata = {
   title: "Cofflo",
   description: "A smoother flow for your café.",
+  icons: {
+    icon: [
+      {
+        url: "/favicon.ico",
+        type: "image/x-icon",
+      },
+    ],
+    shortcut: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({

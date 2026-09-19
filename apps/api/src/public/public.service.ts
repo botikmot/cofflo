@@ -3,13 +3,15 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReservationsService } from '../reservations/reservations.service';
 import { QueueService } from '../queue/queue.service';
-
+import { NotificationService } from '../notification/notification.service';
+import { NotificationType } from '@prisma/client';
 @Injectable()
 export class PublicService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly reservationsService: ReservationsService,
     private readonly queueService: QueueService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   async getTableByQrToken(qrToken: string) {
@@ -167,6 +169,23 @@ export class PublicService {
       data,
     );
 
+    try {
+      await this.notificationService.create({
+        organizationId: branch.organizationId,
+        branchId: branch.id,
+        type: NotificationType.TABLE_RESERVATION,
+        title: 'New Table Reservation',
+        message: `${reservation.customerName} reserved a table for ${reservation.guestCount} guest(s).`,
+        referenceId: reservation.id,
+        referenceType: 'RESERVATION',
+      });
+    } catch (error) {
+      console.error(
+        '[Notifications] Failed to create reservation notification:',
+        error,
+      );
+    }
+
     return {
       publicToken: reservation.publicToken,
       customerName: reservation.customerName,
@@ -255,6 +274,23 @@ export class PublicService {
       branch.id,
       data,
     );
+
+    try {
+      await this.notificationService.create({
+        organizationId: branch.organizationId,
+        branchId: branch.id,
+        type: NotificationType.WAITLIST_JOINED,
+        title: 'New Waitlist Entry',
+        message: `${queueEntry.customerName} joined the waitlist for ${queueEntry.guestCount} guest(s).`,
+        referenceId: queueEntry.id,
+        referenceType: 'QUEUE_ENTRY',
+      });
+    } catch (error) {
+      console.error(
+        '[Notifications] Failed to create waitlist notification:',
+        error,
+      );
+    }
 
     return {
       publicToken: queueEntry.publicToken,

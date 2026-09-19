@@ -12,11 +12,42 @@ export function useWorkspace() {
     (state) => state.activeMembershipId,
   );
 
+  const hydrated = useWorkspaceStore((state) => state.hydrated);
+
+  const hydrateWorkspace = useWorkspaceStore((state) => state.hydrate);
+
   const setActiveMembershipId = useWorkspaceStore(
     (state) => state.setActiveMembershipId,
   );
 
+  /*
+   * ------------------------------------------------------------
+   * HYDRATE WORKSPACE
+   * ------------------------------------------------------------
+   *
+   * Restore the previously selected branch from localStorage.
+   */
+
   useEffect(() => {
+    if (!hydrated) {
+      hydrateWorkspace();
+    }
+  }, [hydrated, hydrateWorkspace]);
+
+  /*
+   * ------------------------------------------------------------
+   * ENSURE ACTIVE MEMBERSHIP
+   * ------------------------------------------------------------
+   *
+   * Do not select the first membership until the persisted
+   * workspace state has been restored.
+   */
+
+  useEffect(() => {
+    if (!hydrated) {
+      return;
+    }
+
     if (!data?.memberships?.length) {
       return;
     }
@@ -28,14 +59,18 @@ export function useWorkspace() {
     if (!exists) {
       setActiveMembershipId(data.memberships[0].id);
     }
-  }, [data, activeMembershipId, setActiveMembershipId]);
+  }, [hydrated, data, activeMembershipId, setActiveMembershipId]);
+
+  /*
+   * ------------------------------------------------------------
+   * ACTIVE MEMBERSHIP
+   * ------------------------------------------------------------
+   */
 
   const activeMembership =
     data?.memberships?.find(
       (membership) => membership.id === activeMembershipId,
-    ) ??
-    data?.memberships?.[0] ??
-    null;
+    ) ?? null;
 
   return {
     user: data,

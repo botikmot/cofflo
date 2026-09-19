@@ -3,7 +3,7 @@
 import { ChevronDown, LogOut, Settings, User } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { useWorkspaceStore } from "@/stores/workspace.store";
+import { disconnectNotificationSocket } from "@/lib/socket";
 import Link from "next/link";
 
 type UserMenuProps = {
@@ -27,10 +27,9 @@ export function UserMenu({
   const initial = firstName?.charAt(0).toUpperCase() ?? "U";
 
   function handleLogout() {
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("activeMembershipId");
+    disconnectNotificationSocket();
 
-    useWorkspaceStore.getState().clearWorkspace();
+    localStorage.removeItem("accessToken");
 
     queryClient.clear();
 
