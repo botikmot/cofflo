@@ -16,7 +16,7 @@ import {
   Utensils,
 } from "lucide-react";
 
-const navigation = [
+export const navigation = [
   {
     label: "Home",
     href: "/dashboard",
@@ -49,7 +49,7 @@ const navigation = [
   },
 ];
 
-const moreItems = [
+export const moreItems = [
   {
     label: "Queue",
     href: "/queue",

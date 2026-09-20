@@ -13,9 +13,11 @@ export function BrandLogo({
 }: BrandLogoProps) {
   const name = businessName?.trim() || "Your Business";
 
+  console.log("logoUrl:", logoUrl);
+
   return (
     <div className="flex min-w-0 items-center gap-3">
-      <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[#E8DED2] bg-white shadow-[0_8px_30px_rgba(70,45,25,0.06)]">
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden">
         {logoUrl ? (
           <Image
             src={logoUrl}

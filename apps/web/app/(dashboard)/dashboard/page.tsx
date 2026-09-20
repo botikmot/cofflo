@@ -1,12 +1,23 @@
 "use client";
 
-import { ClipboardList, Coffee, ShoppingBag, Users } from "lucide-react";
+import {
+  ClipboardList,
+  Coffee,
+  ShoppingBag,
+  Users,
+  Sparkles,
+  Sun,
+  Moon,
+  CloudSun,
+  type LucideIcon,
+} from "lucide-react";
 
 import { useWorkspace } from "@/hooks/auth/use-workspace";
 import { useDashboard } from "@/hooks/dashboard/use-dashboard";
 import type { DashboardTable } from "@/types/dashboard";
 import type { Order } from "@/types/order";
 import { useCurrency } from "@/hooks/settings/use-currency";
+import { CoffeeHeroVisual } from "@/components/dashboard/coffee-visual";
 
 import {
   calculateOccupiedTables,
@@ -17,7 +28,64 @@ import {
 } from "@/lib/dashboard";
 
 import { CoffeeLoading } from "@/components/ui/coffee-loading";
-//import { CoffeeVisual } from "@/components/dashboard/coffee-visual";
+import { useEffect, useState } from "react";
+
+type TimeGreeting = {
+  label: string;
+  title: string;
+  description: string;
+  icon: "sun" | "cloud-sun" | "moon";
+};
+
+const GREETING_ICONS: Record<string, LucideIcon> = {
+  morning: Sun,
+  afternoon: CloudSun,
+  evening: Moon,
+};
+
+function GreetingIconView({
+  icon,
+  className,
+}: {
+  icon: string;
+  className?: string;
+}) {
+  const Icon = GREETING_ICONS[icon] ?? Sun;
+
+  return <Icon className={className} />;
+}
+
+function getTimeGreeting(): TimeGreeting {
+  const hour = new Date().getHours();
+
+  if (hour >= 5 && hour < 12) {
+    return {
+      label: "Good morning",
+      title: "Ready for a great day?",
+      description:
+        "Here’s a quick look at what’s happening across your café today.",
+      icon: "sun",
+    };
+  }
+
+  if (hour >= 12 && hour < 18) {
+    return {
+      label: "Good afternoon",
+      title: "Keep the good flow going.",
+      description:
+        "Here’s a quick look at what’s happening across your café this afternoon.",
+      icon: "cloud-sun",
+    };
+  }
+
+  return {
+    label: "Good evening",
+    title: "Let’s wrap up a great day.",
+    description:
+      "Here’s a quick look at what’s happening across your café this evening.",
+    icon: "moon",
+  };
+}
 
 function normalizeDashboardOrders(value: unknown): Order[] {
   if (Array.isArray(value)) {
@@ -45,7 +113,27 @@ export default function DashboardPage() {
   const organizationId = activeMembership?.organization?.id ?? null;
   const branchId = activeMembership?.branch?.id ?? null;
 
+  const organization = activeMembership?.organization;
+
   const { formatCurrency } = useCurrency();
+
+  const [greeting, setGreeting] = useState<TimeGreeting>(() =>
+    getTimeGreeting(),
+  );
+
+  useEffect(() => {
+    const updateGreeting = () => {
+      setGreeting(getTimeGreeting());
+    };
+
+    updateGreeting();
+
+    const interval = window.setInterval(updateGreeting, 60_000);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, []);
 
   const {
     data,
@@ -117,25 +205,161 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8 pt-4">
       {/* HERO */}
-      <section className="relative overflow-hidden rounded-[32px] border border-[#E7DCCE] bg-[#F0E6DA] shadow-[0_16px_45px_rgba(70,45,25,0.06)]">
-        <div className="grid lg:grid-cols-[1.08fr_0.92fr]">
-          <div className="relative z-10 p-6 sm:p-8">
-            <p className="text-sm font-medium uppercase tracking-[0.16em] text-[#896B53]">
-              Good morning
-            </p>
 
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[#2B2118] sm:text-4xl">
-              Ready for a great day?
+      <section
+        className="
+          relative overflow-hidden
+          rounded-[28px]
+          border border-[#E8D9C9]
+          bg-[#F1E5D5]
+        "
+      >
+        {/* Decorative background shapes */}
+        <div
+          aria-hidden="true"
+          className="
+            pointer-events-none
+            absolute -left-24 -top-28
+            h-80 w-80
+            rounded-full
+            bg-[#E5D1B9]/45
+          "
+        />
+
+        <div
+          aria-hidden="true"
+          className="
+            pointer-events-none
+            absolute -bottom-40 -right-28
+            h-[420px] w-[420px]
+            rounded-full
+            bg-[#E5D1B9]/25
+          "
+        />
+
+        <div
+          className="
+            relative z-10
+            grid
+            grid-cols-1
+            lg:grid-cols-[minmax(0,1fr)_minmax(360px,0.95fr)]
+          "
+        >
+          {/* LEFT: Greeting */}
+          <div
+            className="
+              flex flex-col justify-center
+              p-6
+              sm:p-8
+              lg:p-10
+              xl:p-12
+            "
+          >
+            <div className="flex items-center gap-2">
+              <GreetingIconView
+                icon={greeting.icon}
+                className="h-4 w-4 text-[#9A7658]"
+              />
+
+              <p
+                className="
+                  text-xs font-medium
+                  uppercase tracking-[0.16em]
+                  text-[#896B53]
+                  sm:text-sm
+                "
+              >
+                {greeting.label}
+              </p>
+            </div>
+
+            <h1
+              className="
+                mt-4
+                max-w-xl
+                text-3xl font-semibold
+                leading-[1.12]
+                tracking-[-0.045em]
+                text-[#211810]
+                sm:text-4xl
+                lg:text-[42px]
+              "
+            >
+              {greeting.title}
             </h1>
 
-            <p className="mt-3 max-w-xl text-sm leading-6 text-[#75685C] sm:text-base">
-              Here’s a quick look at what’s happening across your café today.
+            <p
+              className="
+                mt-4
+                max-w-xl
+                text-sm leading-6
+                text-[#806955]
+                sm:text-base
+              "
+            >
+              {greeting.description}
             </p>
+
+            {/* Hero indicator */}
+            <div className="mt-6 flex items-center gap-2">
+              <span className="h-1.5 w-8 rounded-full bg-[#6F4E37]" />
+              <span className="h-1.5 w-1.5 rounded-full bg-[#C3A487]" />
+              <span className="h-1.5 w-1.5 rounded-full bg-[#C3A487]" />
+            </div>
           </div>
 
-          {/* <div className="relative min-h-[220px]">
-            <CoffeeVisual />
-          </div> */}
+          {/* RIGHT: Animated coffee visual */}
+          <div className="relative min-w-0 flex items-center justify-center">
+            <CoffeeHeroVisual />
+            {/* Daily rhythm message */}
+            <div
+              className="
+                coffee-message-float
+                absolute
+                bottom-[15px]
+                right-[20px]
+                z-20
+                hidden
+                text-right
+                lg:block
+              "
+            >
+              <p
+                className="
+                  text-[9px]
+                  font-semibold
+                  uppercase
+                  tracking-[0.18em]
+                  text-[#A18B78]
+                "
+              >
+                Your daily rhythm
+              </p>
+
+              <p
+                className="
+                  mt-1
+                  text-sm
+                  font-semibold
+                  tracking-[-0.02em]
+                  text-[#6F4E37]
+                "
+              >
+                {organization?.tagline ?? "A cozy neighborhood coffee shop."}
+              </p>
+
+              <p
+                className="
+                  mt-1
+                  text-[10px]
+                  font-medium
+                  text-[#A18B78]
+                "
+              >
+                Small steps. Better flow.
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 

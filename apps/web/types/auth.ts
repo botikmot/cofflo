@@ -55,6 +55,7 @@ export type AuthMembership = {
     id: string;
     name: string;
     tagline: string;
+    logoUrl: string;
     slug: string;
     status: string;
   };

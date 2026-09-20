@@ -401,3 +401,203 @@ body {
     opacity: 1;
   }
 }
+
+@theme inline {
+  --animate-coffee-float: coffee-float 3s ease-in-out infinite;
+}
+
+@keyframes coffee-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes coffee-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@keyframes mobile-drawer-in {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+
+/* =========================================
+   Cofflo Hero - Coffee Steam Animation
+   ========================================= */
+
+.coffee-steam-line {
+  stroke: rgba(255, 255, 255, 0.9);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: coffee-steam-rise 3.8s ease-in-out infinite;
+}
+
+.coffee-steam-line-one {
+  animation-delay: 0s;
+}
+
+.coffee-steam-line-two {
+  animation-delay: 1.1s;
+}
+
+.coffee-steam-line-three {
+  animation-delay: 2.1s;
+}
+
+@keyframes coffee-steam-rise {
+  0% {
+    opacity: 0;
+    stroke-dashoffset: 1;
+    transform: translateY(8px) scale(0.92);
+  }
+
+  20% {
+    opacity: 0.8;
+  }
+
+  55% {
+    opacity: 0.45;
+  }
+
+  80% {
+    opacity: 0;
+  }
+
+  100% {
+    opacity: 0;
+    stroke-dashoffset: 0;
+    transform: translateY(-8px) scale(1.05);
+  }
+}
+
+/* =========================================
+   Cofflo Hero - Orbital Animation
+   ========================================= */
+
+.coffee-orbit-slow {
+  animation: coffee-orbit 24s linear infinite;
+  transform-origin: center;
+}
+
+.coffee-orbit-reverse {
+  animation: coffee-orbit-reverse 30s linear infinite;
+  transform-origin: center;
+}
+
+@keyframes coffee-orbit {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes coffee-orbit-reverse {
+  from {
+    transform: rotate(360deg);
+  }
+
+  to {
+    transform: rotate(0deg);
+  }
+}
+
+/* =========================================
+   Cofflo Hero - Floating Badges
+   ========================================= */
+
+.coffee-badge-float {
+  animation: coffee-badge-float 4.5s ease-in-out infinite;
+}
+
+.coffee-badge-float-delayed {
+  animation: coffee-badge-float 5.5s ease-in-out infinite;
+  animation-delay: 1.2s;
+}
+
+@keyframes coffee-badge-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+/* Respect reduced-motion preferences */
+
+@media (prefers-reduced-motion: reduce) {
+  .coffee-steam-line,
+  .coffee-orbit-slow,
+  .coffee-orbit-reverse,
+  .coffee-badge-float,
+  .coffee-badge-float-delayed {
+    animation: none !important;
+  }
+
+  .coffee-steam-line {
+    opacity: 0.65;
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes coffee-message-float {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.85;
+  }
+
+  50% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+
+.coffee-message-float {
+  animation: coffee-message-float 4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .coffee-message-float {
+    animation: none;
+  }
+}

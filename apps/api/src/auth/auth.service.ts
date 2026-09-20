@@ -129,6 +129,7 @@ export class AuthService {
                 id: true,
                 name: true,
                 description: true,
+                logoUrl: true,
                 tagline: true,
                 slug: true,
                 status: true,

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Figtree, Fraunces } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { QueryProvider } from "@/components/providers/query-provider";
+import { AUTH_BRANDING } from "@/lib/auth-branding";
 
 import "./globals.css";
 
@@ -18,16 +19,16 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "Cofflo",
+  title: AUTH_BRANDING.name ?? "Cofflo",
   description: "A smoother flow for your café.",
   icons: {
     icon: [
       {
-        url: "/favicon.ico",
+        url: AUTH_BRANDING.favicon ?? "/favicon.ico",
         type: "image/x-icon",
       },
     ],
-    shortcut: "/favicon.ico",
+    shortcut: AUTH_BRANDING.favicon ?? "/favicon.ico",
   },
 };
 
