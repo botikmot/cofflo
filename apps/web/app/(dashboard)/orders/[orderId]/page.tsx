@@ -20,6 +20,7 @@ import { useWorkspace } from "@/hooks/auth/use-workspace";
 import { useOrder } from "@/hooks/orders/use-order";
 import { useUpdateOrderStatus } from "@/hooks/orders/use-update-order-status";
 import { useRecordPayment } from "@/hooks/orders/use-record-payment";
+import { useCurrency } from "@/hooks/settings/use-currency";
 
 import type { OrderStatus, PaymentMethod } from "@/types/order";
 
@@ -43,6 +44,8 @@ const STATUS_LABELS: Record<OrderStatus, string> = {
 export default function OrderDetailsPage() {
   const params = useParams<{ orderId: string }>();
   const orderId = params.orderId;
+
+  const { currency } = useCurrency();
 
   const { activeMembership, isLoading: workspaceLoading } = useWorkspace();
 
@@ -352,26 +355,28 @@ export default function OrderDetailsPage() {
                     Mark paid — cash
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={() => handlePayment("GCASH")}
-                    disabled={recordPayment.isPending}
-                    className="
-                      flex w-full items-center justify-center gap-2
-                      rounded-2xl
-                      border border-white/15
-                      bg-white/5
-                      px-4 py-3
-                      text-sm font-semibold text-white
-                      transition
-                      hover:bg-white/10
-                      disabled:cursor-not-allowed
-                      disabled:opacity-50
-                    "
-                  >
-                    <CreditCard className="h-4 w-4" />
-                    Mark paid — GCash
-                  </button>
+                  {currency === "PHP" && (
+                    <button
+                      type="button"
+                      onClick={() => handlePayment("GCASH")}
+                      disabled={recordPayment.isPending}
+                      className="
+                        flex w-full items-center justify-center gap-2
+                        rounded-2xl
+                        border border-white/15
+                        bg-white/5
+                        px-4 py-3
+                        text-sm font-semibold text-white
+                        transition
+                        hover:bg-white/10
+                        disabled:cursor-not-allowed
+                        disabled:opacity-50
+                      "
+                    >
+                      <CreditCard className="h-4 w-4" />
+                      Mark paid — GCash
+                    </button>
+                  )}
                 </>
               )}
 

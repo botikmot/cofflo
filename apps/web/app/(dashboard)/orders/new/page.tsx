@@ -21,6 +21,7 @@ import { useCreateOrder } from "@/hooks/orders/use-create-order";
 
 import type { PublicMenuProduct } from "@/types/menu";
 import type { OrderType } from "@/types/order";
+import { useCurrency } from "@/hooks/settings/use-currency";
 
 type CartItem = {
   productId: string;
@@ -51,6 +52,8 @@ export default function NewOrderPage() {
   const [notes, setNotes] = useState("");
 
   const [cart, setCart] = useState<CartItem[]>([]);
+
+  const { formatCurrency } = useCurrency();
 
   const {
     data: menu,
@@ -410,10 +413,7 @@ export default function NewOrderPage() {
                     </div>
 
                     <span className="shrink-0 rounded-lg bg-[#F0E5D9] px-2.5 py-1 text-xs font-semibold text-[#6F4E37]">
-                      ₱
-                      {Number(product.price).toLocaleString("en-PH", {
-                        minimumFractionDigits: 2,
-                      })}
+                      {formatCurrency(Number(product.price))}
                     </span>
                   </div>
 
@@ -487,10 +487,7 @@ export default function NewOrderPage() {
                         </p>
 
                         <p className="mt-1 text-xs text-[#CDB9A5]">
-                          ₱
-                          {item.price.toLocaleString("en-PH", {
-                            minimumFractionDigits: 2,
-                          })}
+                          {formatCurrency(item.price)}
                         </p>
                       </div>
 
@@ -531,10 +528,7 @@ export default function NewOrderPage() {
                       </div>
 
                       <p className="text-sm font-semibold">
-                        ₱
-                        {(item.price * item.quantity).toLocaleString("en-PH", {
-                          minimumFractionDigits: 2,
-                        })}
+                        {formatCurrency(item.price)}
                       </p>
                     </div>
                   </div>
@@ -671,10 +665,7 @@ export default function NewOrderPage() {
                 <span className="text-sm text-[#CDB9A5]">Estimated total</span>
 
                 <span className="text-2xl font-semibold">
-                  ₱
-                  {subtotal.toLocaleString("en-PH", {
-                    minimumFractionDigits: 2,
-                  })}
+                  {formatCurrency(subtotal)}
                 </span>
               </div>
 

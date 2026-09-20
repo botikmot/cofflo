@@ -17,6 +17,7 @@ import {
   Trash2,
   UserRound,
   X,
+  ChevronDown,
 } from "lucide-react";
 
 import { CoffeeLoading } from "@/components/ui/coffee-loading";
@@ -30,6 +31,8 @@ import { createBranch, removeBranch } from "@/services/branches.service";
 
 import type { BranchSettings, OrganizationSettings } from "@/types/settings";
 import { uploadService } from "@/services/upload.service";
+import { CURRENCY_OPTIONS } from "@/lib/currencies";
+import { toast } from "sonner";
 
 export default function SettingsPage() {
   const {
@@ -235,15 +238,15 @@ function SettingsWorkspace({
 
       await refetchOrganization();
 
-      showSuccess("Organization settings updated successfully.");
+      toast.success("Settings updated", {
+        description: "Organization settings were updated successfully.",
+      });
     } catch (error) {
       console.error("UPDATE ORGANIZATION SETTINGS FAILED:", error);
 
-      showError(
-        error instanceof Error
-          ? error.message
-          : "Unable to update organization settings.",
-      );
+      toast.error("Update failed", {
+        description: "Unable to update organization settings.",
+      });
     } finally {
       setSavingOrganization(false);
     }
@@ -282,15 +285,15 @@ function SettingsWorkspace({
 
       await refetchBranches();
 
-      showSuccess(`${updated.name} branch settings updated successfully.`);
+      toast.success("Branch updated", {
+        description: `${updated.name} branch settings updated successfully.`,
+      });
     } catch (error) {
       console.error("UPDATE BRANCH SETTINGS FAILED:", error);
 
-      showError(
-        error instanceof Error
-          ? error.message
-          : "Unable to update branch settings.",
-      );
+      toast.error("Update failed", {
+        description: "Unable to update branch settings.",
+      });
     } finally {
       setSavingBranch(false);
     }
@@ -329,13 +332,16 @@ function SettingsWorkspace({
 
       setShowCreateBranch(false);
 
-      showSuccess("Branch created successfully.");
+      toast.success("Branch created", {
+        description: "Branch created successfully.",
+      });
     } catch (error) {
       console.error("CREATE BRANCH FAILED:", error);
 
-      showError(
-        error instanceof Error ? error.message : "Unable to create branch.",
-      );
+      toast.error("Create failed", {
+        description:
+          error instanceof Error ? error.message : "Unable to create branch.",
+      });
     } finally {
       setCreatingBranch(false);
     }
@@ -408,13 +414,16 @@ function SettingsWorkspace({
       setNewPassword("");
       setConfirmPassword("");
 
-      showSuccess("Password changed successfully.");
+      toast.success("Password updated", {
+        description: "Password changed successfully.",
+      });
     } catch (error) {
       console.error("CHANGE PASSWORD FAILED:", error);
 
-      showError(
-        error instanceof Error ? error.message : "Unable to change password.",
-      );
+      toast.error("Update failed", {
+        description:
+          error instanceof Error ? error.message : "Unable to change password.",
+      });
     } finally {
       setChangingPassword(false);
     }
@@ -698,16 +707,17 @@ function SettingsWorkspace({
                   disabled={!canManageOrganization}
                 />
 
-                <CompactInput
+                <CompactSelect
                   label="Currency"
                   value={organizationForm.currency}
                   onChange={(value) =>
                     setOrganizationForm({
                       ...organizationForm,
-                      currency: value.toUpperCase().slice(0, 10),
+                      currency: value,
                     })
                   }
                   disabled={!canManageOrganization}
+                  options={CURRENCY_OPTIONS}
                 />
 
                 <CompactInput
@@ -1256,6 +1266,73 @@ function CompactTextarea({
         onChange={(event) => onChange(event.target.value)}
         className="w-full resize-none rounded-xl border border-[#DDD0C5] bg-[#FFFCF8] px-3 py-2 text-xs leading-5 text-[#3E342D] outline-none transition placeholder:text-[#B2A59A] focus:border-[#B99D84] focus:ring-2 focus:ring-[#EADFD4] disabled:cursor-not-allowed disabled:bg-[#F5F0EB] disabled:text-[#988C82]"
       />
+    </label>
+  );
+}
+
+function CompactSelect({
+  icon,
+  label,
+  value,
+  onChange,
+  disabled,
+  options,
+}: {
+  icon?: ReactNode;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
+  options: {
+    value: string;
+    label: string;
+  }[];
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 flex items-center gap-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-[#918174]">
+        {icon}
+        {label}
+      </span>
+
+      <div className="relative">
+        <select
+          value={value}
+          disabled={disabled}
+          onChange={(event) => onChange(event.target.value)}
+          className="
+            h-9 w-full appearance-none rounded-xl
+            border border-[#DDD0C5]
+            bg-[#FFFCF8]
+            px-3 pr-9
+            text-xs text-[#3E342D]
+            outline-none
+            transition
+            focus:border-[#B99D84]
+            focus:ring-2 focus:ring-[#EADFD4]
+            disabled:cursor-not-allowed
+            disabled:bg-[#F5F0EB]
+            disabled:text-[#988C82]
+          "
+        >
+          {options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+
+        <ChevronDown
+          className="
+            pointer-events-none
+            absolute right-3 top-1/2
+            h-3.5 w-3.5
+            -translate-y-1/2
+            text-[#8E8074]
+          "
+          strokeWidth={2}
+        />
+      </div>
     </label>
   );
 }

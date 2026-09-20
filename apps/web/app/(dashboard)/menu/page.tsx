@@ -33,18 +33,11 @@ import {
 import type { ProductCategory } from "@/services/products.service";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useCurrency } from "@/hooks/settings/use-currency";
 
 type ProductFilter = "ALL" | "ACTIVE" | "ARCHIVED";
 
 type MenuTab = "PRODUCTS" | "CATEGORIES";
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("en-PH", {
-    style: "currency",
-    currency: "PHP",
-    minimumFractionDigits: 2,
-  }).format(value);
-}
 
 export default function MenuPage() {
   const queryClient = useQueryClient();
@@ -52,6 +45,8 @@ export default function MenuPage() {
   const { activeMembership, isLoading: workspaceLoading } = useWorkspace();
 
   const organizationId = activeMembership?.organization?.id;
+
+  const { formatCurrency } = useCurrency();
 
   const {
     data: products = [],

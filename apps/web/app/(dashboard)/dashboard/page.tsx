@@ -6,6 +6,7 @@ import { useWorkspace } from "@/hooks/auth/use-workspace";
 import { useDashboard } from "@/hooks/dashboard/use-dashboard";
 import type { DashboardTable } from "@/types/dashboard";
 import type { Order } from "@/types/order";
+import { useCurrency } from "@/hooks/settings/use-currency";
 
 import {
   calculateOccupiedTables,
@@ -44,11 +45,12 @@ export default function DashboardPage() {
   const organizationId = activeMembership?.organization?.id ?? null;
   const branchId = activeMembership?.branch?.id ?? null;
 
+  const { formatCurrency } = useCurrency();
+
   const {
     data,
     isLoading: dashboardLoading,
     isError,
-    error,
   } = useDashboard({
     organizationId: organizationId ?? undefined,
     branchId: branchId ?? undefined,
@@ -141,9 +143,7 @@ export default function DashboardPage() {
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <DashboardStat
           label="Today's sales"
-          value={`₱${todaySales.toLocaleString("en-PH", {
-            minimumFractionDigits: 2,
-          })}`}
+          value={formatCurrency(todaySales)}
           detail={`${todayOrders.length} orders today`}
           icon={Coffee}
         />
@@ -232,6 +232,8 @@ function RecentOrders({
 }: {
   orders: ReturnType<typeof getRecentOrders>;
 }) {
+  const { formatCurrency } = useCurrency();
+
   return (
     <div className="rounded-[28px] border border-[#E7DCCE] bg-[#FFFDF9] p-5 shadow-[0_10px_35px_rgba(70,45,25,0.045)] sm:p-6">
       <div className="flex items-center justify-between">
@@ -271,10 +273,7 @@ function RecentOrders({
 
               <div className="text-right">
                 <p className="text-sm font-semibold">
-                  ₱
-                  {Number(order.total).toLocaleString("en-PH", {
-                    minimumFractionDigits: 2,
-                  })}
+                  {formatCurrency(Number(order.total))}
                 </p>
 
                 <p className="mt-0.5 text-xs text-[#7D6F63]">{order.status}</p>

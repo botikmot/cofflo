@@ -32,15 +32,9 @@ import { tableSessionService } from "@/services/table-session.service";
 
 import type { DashboardTable } from "@/types/dashboard";
 
-type TableFilter = "ALL" | "AVAILABLE" | "OCCUPIED" | "UNAVAILABLE";
+import { useCurrency } from "@/hooks/settings/use-currency";
 
-function formatCurrency(value: number, currency = "PHP") {
-  return new Intl.NumberFormat("en-PH", {
-    style: "currency",
-    currency,
-    minimumFractionDigits: 2,
-  }).format(value);
-}
+type TableFilter = "ALL" | "AVAILABLE" | "OCCUPIED" | "UNAVAILABLE";
 
 function formatTime(value: string) {
   return new Intl.DateTimeFormat("en-PH", {
@@ -57,6 +51,8 @@ export default function TablesPage() {
   const organizationId = activeMembership?.organization?.id;
 
   const branchId = activeMembership?.branch?.id;
+
+  const { formatCurrency } = useCurrency();
 
   const {
     data: tables = [],
