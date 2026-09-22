@@ -19,6 +19,8 @@ import { ReservationConfirmation } from "@/components/public/reservation/reserva
 import { ReservationForm } from "@/components/public/reservation/reservation-form";
 
 import { usePublicBranch } from "@/hooks/public/use-public-branch";
+import Image from "next/image";
+import { AUTH_BRANDING } from "@/lib/auth-branding";
 
 type View =
   | "home"
@@ -75,9 +77,18 @@ export default function PublicBranchPage() {
       <main className="min-h-screen bg-[#F7F3ED] px-5 py-8 text-[#2B2118]">
         <div className="mx-auto flex min-h-[80vh] max-w-md items-center justify-center">
           <div className="w-full rounded-[32px] border border-[#E8DED4] bg-[#FFFDF9] p-8 text-center shadow-[0_20px_60px_rgba(70,45,25,0.08)]">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-red-50 text-red-600">
+            {/* <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-red-50 text-red-600">
               <Coffee className="h-7 w-7" />
-            </div>
+            </div> */}
+
+            <Image
+              src={AUTH_BRANDING.logo}
+              alt={AUTH_BRANDING.name}
+              width={90}
+              height={90}
+              priority
+              className="h-auto w-[150px]"
+            />
 
             <h1 className="mt-5 text-xl font-semibold">Café unavailable</h1>
 
@@ -228,17 +239,25 @@ export default function PublicBranchPage() {
               <div
                 className="
                   flex
-                  h-11
-                  w-11
+                  h-18
+                  w-19
                   items-center
                   justify-center
                   rounded-2xl
-                  bg-[#6F4E37]
+                  
                   text-white
                   shadow-[0_10px_30px_rgba(111,78,55,0.2)]
                 "
               >
-                <Coffee className="h-5 w-5" />
+                {/* <Coffee className="h-5 w-5" /> */}
+                <Image
+                  src={AUTH_BRANDING.logo}
+                  alt={AUTH_BRANDING.name}
+                  width={90}
+                  height={90}
+                  priority
+                  className="h-auto w-[150px]"
+                />
               </div>
 
               <div>

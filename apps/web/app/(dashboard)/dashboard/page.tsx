@@ -5,7 +5,6 @@ import {
   Coffee,
   ShoppingBag,
   Users,
-  Sparkles,
   Sun,
   Moon,
   CloudSun,

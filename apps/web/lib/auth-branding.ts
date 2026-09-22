@@ -1,7 +1,7 @@
 export const AUTH_BRANDING = {
   name: "ZE Cafe", //"Cofflo",
   logo: "/images/ZE.png", //"/images/cofflo-logo.png",
-  favicon: "/ZE.ico",
+  favicon: "/coffee-cup.ico",
   tagline: "Brew . Sip . Repeat", //"Your business, in flow.",
 
   description:
